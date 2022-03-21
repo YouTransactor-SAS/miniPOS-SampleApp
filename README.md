@@ -13,13 +13,10 @@ The main function of the SDK is to send RPC commands to the SVPP and the WI-FI i
 
 The SDK contains several modules:  RPC, Payment, MDM, Network.  
 
-The RPC module use an SPI interface to send/receive, RPC command/response from secure processor. It provides an implementation of all RPC Commands you will see next how to use that in your application.
-
-The Network module implement the data exchnage usin mobile data and the WI-FI. The application can use it to call webservices. An example is provided next.
-
-The MDM module is an implementation of all YouTransactor's TMS services. The TMS server is mainly used to manage the version of firmware and ICC / NFC configurations of card terminal. So the SDK allows you to transparently update of the terminal using our TMS. This module is useless if you decide to use another TMS not the YouTransactor one.
-
-The payment module implements the EMV transaction processing for contact and contactless. The SDK takes in input a UCubePaymentRequest structure. Is is used to configure the current payment and durring the transaction a callback is returned for every step. At the end of transaction a PaymentContext  structure is returned which contains all necessary data to save the transaction.  
+* The RPC module use an SPI interface to send/receive, RPC command/response from secure processor. It provides an implementation of all RPC Commands you will see next how to use that in your application.
+* The Network module implement the data exchnage usin mobile data and the WI-FI. The application can use it to call webservices. An example is provided next.
+* The MDM module is an implementation of all YouTransactor's TMS services. The TMS server is mainly used to manage the version of firmware and ICC / NFC configurations of card terminal. So the SDK allows you to transparently update of the terminal using our TMS. This module is useless if you decide to use another TMS not the YouTransactor one.
+* The payment module implements the EMV transaction processing for contact and contactless. The SDK takes in input a UCubePaymentRequest structure. Is is used to configure the current payment and durring the transaction a callback is returned for every step. At the end of transaction a PaymentContext  structure is returned which contains all necessary data to save the transaction.  
 An example of Payment call is provided next.
 
 All this functions are resumed in one Class which is UCubeAPI.
@@ -32,6 +29,29 @@ For more information about [YouTransactor](https://www.youtransactor.com/) produ
 
 ### Introduction:
 YouTransactor miniPOS card terminals is a uCube Touch terminal. It is a lightweight and compact payment dongle. 
+
+## I. General overview 
+
+### 1. Introduction
+
+YouTransactor mPOS card terminals are : 
+* uCube Touch mPOS
+* uCube Touch miniPOS
+
+The uCube Touch exist in two versions, first one needs the smartphone to communication with the server, the secod one is a standalone version. Which has the connectevity and the payment application runs directly on the device.
+
+This github is specific to the miniPOS version. For more information about mPOS version please refers to these github repo
+* [Android SDK](https://github.com/YouTransactor-SAS/mPOS-SDK-Android/)
+* [IOS SDK](https://github.com/YouTransactor-SAS/mPOS-SDK-IOS/)
+
+
+### 3. uCube Touch
+
+The uCube Touch is a lightweight and compact payment dongle. It is a point of sale, that accepts contactless and contact payment cards.
+
+<p align="center">
+  <img width="250" height="250" src="https://user-images.githubusercontent.com/59020462/77367842-437df080-6d5b-11ea-8e3a-423c3bc6b96b.png">
+</p>
 
 ### 1. The Management System
 
