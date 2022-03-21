@@ -57,9 +57,8 @@ The SDK prints logs in logcat at runtime. The log module use a default implement
 uCube Touch miniPOS integrates a Quectel modem (BG95-M3) and a St-microelectronics secure processor (STM32L4).  
  The modem is running the SDK software including the application demo “appmodem” while the secure processor is running the SVPP software that is controlling display, keyboard and has interface with EMV contact and contactless modules.  
   
-  
-<img src="../../images/architecture.png" alt="drawing" width="800" height="500" />  
-
+![architecture](https://user-images.githubusercontent.com/59020462/159263753-7a32a338-6951-4152-bc61-9cb957dd0892.png)
+ 
 #### 1.2 Application Architecture
 This diagrams describes the general software architecture. Only the uCubeAPI methods and the RPC commands are public and you can call them.  
 <img src="../../images/sdk_architecture.png"  width="900" height="500" />  
