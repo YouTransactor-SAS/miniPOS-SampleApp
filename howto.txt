@@ -1,0 +1,126 @@
+################################################################################
+# 2015-2025 Copyright YOUTRANSACTOR ALL RIGHTS RESERVED. YouTransactor,
+# 32, rue Brancion 75015 Paris France, RCS PARIS: B 491 208 500, YOUTRANSACTOR
+# CONFIDENTIAL AND PROPRIETARY INFORMATION , CONTROLLED DISTRIBUTION ONLY,
+# THEREFORE UNDER NDA ONLY. YOUTRANSACTOR Authorized Parties and who have
+# signed NDA do not have permission to distribute this documentation further.
+# Unauthorized recipients must destroy any electronic and hard-copies
+# and without reading and notify Gregory Mardinian, CTO, YOUTRANSACTOR
+# immediately at gregory.mardinian@youtransactor.com.
+#
+# Author: CHHIM Stephane
+# Release date 29/07/2020
+################################################################################
+
+
+################################################################################
+# BRIEF
+################################################################################
+# This SDK contains the source code of the small Modem Application demo
+# developped by YT.
+# It contains 3 archives:
+#    - "YT_miniPOS_SDK_vA.B.C.D.tar.gz" (included in all deliveries)
+#    - "toolchains.tar.gz" (only needed once)
+#    - "modem_tools.tar.gz" (only needed once)
+# In "YT_miniPOS_SDK_vA.B.C.D.tar.gz", you will find libraries (from YT &
+# Quectel), sources and all the necessary files to compile (Makefile,
+# linker script).
+# The toolchains is in "toolchains.tar.gz" and must be extract at the root path
+# of the sources (by default, the Makefile search for it there).
+# If you want to have the toolchains elsewhere, please set the path in the
+# Makefile.
+# Please verify that all files from "bin" folder have executing right.
+# "modem_tools.tar.gz" contains the driver and the tools to flash the
+# the modem application in the device. Please refer to section "Driver" and
+# "Flash"
+# To compile this exemple, just call "make ARCH=MODEM all" in a terminal at the
+# root path.
+# Results will be built in folder "MODEM", binary will be in "MODEM/bin" whereas
+# *.o will be in "MODEM/build" by default. This is configurable in the Makefile.
+# The files you need to load in the modem are "quectel_application_vA.B.C.D.bin"
+# and "oem_app_path.ini". You may change the .bin name in the Makefile but MUST
+# NOT change the .ini name.
+# You can download your Modem Application files (.bin & .ini) in the uCubeTouch
+# by simply using a USB type C cable. Please refers to "Flash" section for
+# the detailled process on how to flash your Modem Application.
+# Each time you need to download a new Modem Application, upon completion, you
+# will need to power off/on the uCubeTouch as the Modem Application is stored
+# in none-executable flash and loaded in RAM at each power on.
+# For developpment purpose, we have chosen this behavior but on field, the
+# power off/on of the uCube will not restart the modem.
+################################################################################
+
+
+################################################################################
+# DRIVER
+################################################################################
+# In the "drivers" folder, you will find an archive containing the driver you
+# will need to compile depending on the kernel version you use. To know which
+# kernel version you use, type the command "uname -r".
+# Choose the folder "version" closer to your kernel version. You will need to
+# modify its sources as instructed by Quectel in
+# "Quectel_LTE&5G_Linux_USB_Driver_User_Guide_V2.pdf". You will need to follow
+# part 3.2. Upon reaching part 3.2.6, you need to skip "step 2".
+# Once it is done, please type "sudo make install" in the driver version folder.
+# To verify if everything is OK, you may go to 
+# /lib/modules/"your_kernel_version"/kernel/drivers/usb/serial and see if
+# "option.ko", "qcserial.ko" and "usb_wwan.ko" are there.
+# Also, when plugging the device with the USB, it should mount 4 ttyUSB.
+# You can try in a terminal to do an autocompletion of "ls /dev/ttUSB"
+################################################################################
+
+
+################################################################################
+# FLASH
+################################################################################
+# In the flashtools folder, you will find 2 tools :
+#    - QExplorer will allow you to flash your application in the modem
+#    - QFirehose will allow you to flash the firmware of the modem
+# You will mainly use QExplorer as the application will be "on top" of the
+# firmware.
+# The only case you will need to reflash the firmware is when you loaded an
+# application that keeps on rebooting, not giving you the time to reflash it.
+# (QExplorer will not find the mounted ttyUSB).
+# In this case, you to power off the device, hold the vertical button (it is the
+# USB boot of the modem), power it back on and then use QFirehose. Upon 
+# completion, power off/on the device (without touching USB Boot). You should be
+# able to reflash the modem.
+#
+# QExplorer:
+#  to flash the modem with you application, please type:
+#   sudo "path_to_QExplorer"/QExplorer -f "path_to_bin"/"your_application.bin"
+#   sudo "path_to_QExplorer"/QExplorer -f "path_to_bin"/oem_app_path.ini
+#  to remove a file from the modem, please type:
+#   sudo "path_to_QExplorer"/QExplorer -d /datatx/"your_application.bin"
+#   sudo "path_to_QExplorer"/QExplorer -d /datatx/oem_app_path.ini
+#  to flash modem using eclipse project:
+#    -add username and path to QExplorer in visudo:
+#     example : if path to QEXPLORER is /home/youtransactor/Desktop/modem_tools/flashtools/QExplorer
+#     and user is youtransactor, add below line in visudo: type sudo visudo
+#     youtransactor ALL = NOPASSWD: /home/youtransactor/Desktop/modem_tools/flashtools/QExplorer
+#    -update the QEXPLORER path in Makefile:
+#     QEXPLORER=/home/youtransactor/Desktop/modem_tools/flashtools/QExplorer/QExplorer
+# For more info, please read the "readme.txt" in the QExplorer folder.
+#
+# QFirehose:
+#  to flash the custom firmware that will erase your application, please type:
+#   sudo "path_to_QFirehose"/QFirehose -f erase_quecopen_app/update/efs2apps.mbn
+################################################################################
+
+
+################################################################################
+# DEBUG
+################################################################################
+# Unfortunately, there is no way to connect a debug probe to the modem to use
+# a debugger. Only way to "debug" is to "print your way through".
+# With the development device, you have a small PCB that you can use for this
+# purpose. It is a USB <=> UART converter (you may need to download the FTDI
+# driver). Once the cable are plug, you can use a hyper terminal such as
+# minicom. Baudrate of the UART is 115200.
+#
+# In the sources, you will find in src/projects/appmodem/debug_config/ a .c in
+# which you can dynamically change the debug level. By default, no debug print
+# are activated.
+# Several #define has been created for customer to allow you to enable only your
+# prints. (PRINTF, PRINTF_VERBOSE, PRINTF_HEX_BUFFER)
+################################################################################

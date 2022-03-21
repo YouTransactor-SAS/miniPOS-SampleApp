@@ -1,0 +1,1132 @@
+/**
+* 2006-2018 YOUTRANSACTOR ALL RIGHTS RESERVED. YouTransactor,
+* 32, rue Brancion 75015 Paris France, RCS PARIS: B 491 208 500, YOUTRANSACTOR
+* CONFIDENTIAL AND PROPRIETARY INFORMATION , CONTROLLED DISTRIBUTION ONLY,
+* THEREFORE UNDER NDA ONLY. YOUTRANSACTOR Authorized Parties and who have
+* signed NDA do not have permission to distribute this documentation further.
+* Unauthorized recipients must destroy any electronic and hard-copies
+* and without reading and notify Gregory Mardinian, CTO, YOUTRANSACTOR
+* immediately at gregory.mardinian@youtransactor.com.
+*
+* @file: network_manager.c
+*
+* @date: May 2021
+*
+* @author: ktahri <khawla.tahri@ext.youtransactor.com>
+*/
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <float.h>
+#include <math.h>
+#include "config.h"
+#include "errors.h"
+#include "quectel_utils.h"
+#include "ucube_api.h"
+#include "svpp_com.h"
+#include "debug.h"
+#include "network_manager.h"
+#include "debug.h"
+#include "payment.h"
+#include "payment_ct.h"
+#include "customer_app.h"
+#include "communication_menu.h"
+#include "get_info.h"
+#include "frozen.h"
+#include "display_message.h"
+#ifdef CONFIG_MODEM
+#include "qapi_dss.h"
+#include "qapi_fs.h"
+#include "driver_wifi.h"
+#include "network.h"
+#include "driver_spi.h"
+#elif defined(CONFIG_PC)
+#endif //CONFIG_XX
+static volatile uint8_t download_complete = 0;
+extern network_ctx_t network_ctx;
+extern socket_handler_t socket_handler_ct;
+extern customer_app_ctx_t customer_app_ctx;
+extern network_handler_t  network_handler_ct;
+extern uint8_t send_request_done;
+#define HTTPS_CA_PEM            "/datatx/fota_cacert.pem"
+#define HTTPS_CERT_PEM          "/datatx/fota_client_cert.pem"
+#define HTTPS_PREKEY_PEM        "/datatx/fota_client_key.pem"
+//#define HTTP_REQUEST_URL        "https://mdm-test.youtransactor.com/quectel_application_v1.0.0.4.bin"
+#define HTTP_REQUEST_URL_TEMP "https://api.openweathermap.org/data/2.5/weather?appid=b501926337dae5526232d8170de7ad1a&q=Paris,fr&units=metric"
+#define HTTP_REQUEST_URL_MDM "https://mdm-test.youtransactor.com/MDM/jaxrs/public/v1/dongle/register"
+#define HTTP_REQUEST_URL  "https://public-api.mdm-dev.youtransactor.com/MDM/jaxrs/public/v1/dongle/register"
+#define USER_AGENT  "miniPOS-Khawla"
+#define CONTENT_TYPE  "application/octet-stream"
+#define DEVICE_ID  "070040300299"
+#define ID_TYPE  "C3"
+#define CONTENT_LENGHT  "1929"
+#define URL_MDM "/MDM/jaxrs/public/v1/dongle/register"
+#define HOST_URL "public-api.mdm-dev.youtransactor.com\r\n\r\n"
+#define USER_AGENT_T  "User-Agent"
+#define CONTENt_TYPE_T  "Content-Type"
+#define DEVICE_ID_T  "x-device-id"
+#define ID_TYPE_T  "x-id-type"
+#define CONTENT_LENGHT_T  "Content-Length"
+http_header_t request_header_list[7];
+uint8_t http_request_payload[2000];
+uint32_t http_request_payload_size=0;
+//#define CERT_PATH "/datatx/cert"
+#define CERT_PATH "/datatx/cert"
+
+#ifdef CONFIG_MODEM
+extern uint8_t  wifi_connect_ap_complete;
+uint8_t response_buffer[HTTP_RESPONSE_PAYLOAD_MAX_LEN];
+uint8_t header_buffer[HTTP_RESPONSE_HEADER_MAX_LEN];
+uint8_t download_mdm_complete=0;
+http_response response_paris_temp;
+
+char testCertifServerYT[]="-----BEGIN CERTIFICATE-----\n\
+MIIDSjCCAjKgAwIBAgIQRK+wgNajJ7qJMDmGLvhAazANBgkqhkiG9w0BAQUFADA/\
+MSQwIgYDVQQKExtEaWdpdGFsIFNpZ25hdHVyZSBUcnVzdCBDby4xFzAVBgNVBAMT\
+DkRTVCBSb290IENBIFgzMB4XDTAwMDkzMDIxMTIxOVoXDTIxMDkzMDE0MDExNVow\
+PzEkMCIGA1UEChMbRGlnaXRhbCBTaWduYXR1cmUgVHJ1c3QgQ28uMRcwFQYDVQQD\
+Ew5EU1QgUm9vdCBDQSBYMzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB\
+AN+v6ZdQCINXtMxiZfaQguzH0yxrMMpb7NnDfcdAwRgUi+DoM3ZJKuM/IUmTrE4O\
+rz5Iy2Xu/NMhD2XSKtkyj4zl93ewEnu1lcCJo6m67XMuegwGMoOifooUMM0RoOEq\
+OLl5CjH9UL2AZd+3UWODyOKIYepLYYHsUmu5ouJLGiifSKOeDNoJjj4XLh7dIN9b\
+xiqKqy69cK3FCxolkHRyxXtqqzTWMIn/5WgTe1QLyNau7Fqckh49ZLOMxt+/yUFw\
+7BZy1SbsOFU5Q9D8/RhcQPGX69Wam40dutolucbY38EVAjqr2m7xPi71XAicPNaD\
+aeQQmxkqtilX4+U9m5/wAl0CAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNV\
+HQ8BAf8EBAMCAQYwHQYDVR0OBBYEFMSnsaR7LHH62+FLkHX/xBVghYkQMA0GCSqG\
+SIb3DQEBBQUAA4IBAQCjGiybFwBcqR7uKGY3Or+Dxz9LwwmglSBd49lZRNI+DT69\
+ikugdB/OEIKcdBodfpga3csTS7MgROSR6cz8faXbauX+5v3gTt23ADq1cEmv8uXr\
+AvHRAosZy5Q6XkjEGB5YGV8eAlrwDPGxrancWYaLbumR9YbK+rlmM6pZW87ipxZz\
+R8srzJmwN0jP41ZL9c8PDHIyh8bwRLtTcm1D9SZImlJnt1ir/md2cXjbDaJWFBM5\
+JDGFoqgCWjBH4d1QB7wCCZAA62RjYJsWvIjJEubSfZGL+T0yjWW06XyxV3bqxbYo\
+Ob8VZRzI9neWagqNdwvYkQsEjgfbKbYK7p2CNTUQ\n\
+-----END CERTIFICATE-----";
+
+
+char testMdmPayload[]={0x3,\
+
+0xab,0x30,0x82,0x3,0xa7,0x30,0x82,0x2,0x8f,0x2,\
+
+0x1,0x1,0x30,0xd,0x6,0x9,0x2a,0x86,0x48,0x86,\
+
+0xf7,0xd,0x1,0x1,0xb,0x5,0x0,0x30,0x81,0x99,\
+
+0x31,0xb,0x30,0x9,0x6,0x3,0x55,0x4,0x6,0x13,\
+
+0x2,0x46,0x52,0x31,0xc,0x30,0xa,0x6,0x3,0x55,\
+
+0x4,0x8,0xc,0x3,0x49,0x44,0x46,0x31,0xe,0x30,\
+
+0xc,0x6,0x3,0x55,0x4,0x7,0xc,0x5,0x50,0x41,\
+
+0x52,0x49,0x53,0x31,0xf,0x30,0xd,0x6,0x3,0x55,\
+
+0x4,0xa,0xc,0x6,0x47,0x4d,0x58,0x5f,0x43,0x41,\
+
+0x31,0x18,0x30,0x16,0x6,0x3,0x55,0x4,0xb,0xc,\
+
+0xf,0x52,0x26,0x44,0x5f,0x43,0x41,0x1b,0x5b,0x44,\
+
+0x1b,0x5b,0x44,0x1b,0x5b,0x44,0x31,0xb,0x30,0x9,\
+
+0x6,0x3,0x55,0x4,0x3,0xc,0x2,0x43,0x41,0x31,\
+
+0x34,0x30,0x32,0x6,0x9,0x2a,0x86,0x48,0x86,0xf7,\
+
+0xd,0x1,0x9,0x1,0x16,0x25,0x73,0x79,0x6c,0x76,\
+
+0x61,0x69,0x6e,0x2e,0x75,0x6d,0x64,0x65,0x6e,0x73,\
+
+0x74,0x6f,0x63,0x6b,0x40,0x79,0x6f,0x75,0x74,0x72,\
+
+0x61,0x6e,0x73,0x61,0x63,0x74,0x6f,0x72,0x2e,0x63,\
+
+0x6f,0x6d,0x20,0x30,0x1e,0x17,0xd,0x31,0x33,0x31,\
+
+0x30,0x33,0x31,0x31,0x34,0x30,0x32,0x33,0x35,0x5a,\
+
+0x17,0xd,0x32,0x33,0x31,0x30,0x32,0x39,0x31,0x34,\
+
+0x30,0x32,0x33,0x35,0x5a,0x30,0x81,0x98,0x31,0xb,\
+
+0x30,0x9,0x6,0x3,0x55,0x4,0x6,0x13,0x2,0x46,\
+
+0x52,0x31,0xc,0x30,0xa,0x6,0x3,0x55,0x4,0x8,\
+
+0xc,0x3,0x49,0x44,0x46,0x31,0xe,0x30,0xc,0x6,\
+
+0x3,0x55,0x4,0x7,0xc,0x5,0x50,0x41,0x52,0x49,\
+
+0x53,0x31,0x1a,0x30,0x18,0x6,0x3,0x55,0x4,0xa,\
+
+0xc,0x11,0x47,0x4d,0x58,0x20,0x59,0x6f,0x75,0x54,\
+
+0x72,0x61,0x6e,0x73,0x61,0x63,0x74,0x6f,0x72,0x31,\
+
+0xd,0x30,0xb,0x6,0x3,0x55,0x4,0xb,0xc,0x4,\
+
+0x50,0x72,0x6f,0x64,0x31,0xb,0x30,0x9,0x6,0x3,\
+
+0x55,0x4,0x3,0xc,0x2,0x53,0x55,0x31,0x33,0x30,\
+
+0x31,0x6,0x9,0x2a,0x86,0x48,0x86,0xf7,0xd,0x1,\
+
+0x9,0x1,0x16,0x24,0x73,0x79,0x6c,0x76,0x61,0x69,\
+
+0x6e,0x2e,0x75,0x6d,0x64,0x65,0x6e,0x73,0x74,0x6f,\
+
+0x63,0x6b,0x40,0x79,0x6f,0x75,0x74,0x72,0x61,0x6e,\
+
+0x73,0x61,0x63,0x74,0x6f,0x72,0x2e,0x63,0x6f,0x6d,\
+
+0x30,0x82,0x1,0x22,0x30,0xd,0x6,0x9,0x2a,0x86,\
+
+0x48,0x86,0xf7,0xd,0x1,0x1,0x1,0x5,0x0,0x3,\
+
+0x82,0x1,0xf,0x0,0x30,0x82,0x1,0xa,0x2,0x82,\
+
+0x1,0x1,0x0,0xc8,0x18,0x81,0xf2,0xde,0x71,0xb,\
+
+0x7c,0x33,0xe6,0x11,0x22,0x2a,0x74,0x15,0xba,0xac,\
+
+0x88,0x99,0x48,0x75,0x42,0x44,0x3c,0x5b,0x69,0x8c,\
+
+0x60,0x35,0x38,0xb3,0xbd,0x3e,0xbc,0x4c,0x70,0xa1,\
+
+0x7f,0x1b,0xfc,0xba,0x30,0x3b,0x2e,0x63,0xd8,0x2e,\
+
+0x7d,0x42,0xa0,0x93,0x4c,0x2,0xe8,0x2a,0xab,0xd,\
+
+0x24,0x17,0x5d,0x3f,0xde,0x6f,0x4e,0x7a,0xca,0xc9,\
+
+0x98,0xbb,0x54,0x25,0x35,0x2,0x1f,0x90,0xbd,0xc0,\
+
+0x4a,0xea,0x8b,0xde,0xd7,0x32,0xfe,0xe5,0x8,0xdf,\
+
+0x10,0xea,0x5c,0xd,0x24,0xe2,0x17,0x95,0x9c,0x2e,\
+
+0x50,0x74,0x2c,0x4,0x6,0x92,0xfa,0x9e,0xfa,0xc5,\
+
+0x15,0xea,0x2a,0x3c,0x9c,0xed,0xd,0xe6,0x19,0x1a,\
+
+0x9c,0x1c,0x2e,0x27,0xf9,0xea,0xc2,0x96,0x96,0xd,\
+
+0x42,0x4e,0xa1,0x27,0x9b,0x5a,0x33,0x74,0xb7,0x90,\
+
+0x60,0x3f,0x9e,0xe5,0x6,0x34,0x64,0x5c,0x41,0xc0,\
+
+0xe1,0xa9,0xdd,0x85,0x18,0x4a,0xda,0x5d,0xf5,0x92,\
+
+0x99,0xa1,0xa,0xb2,0xdc,0xf,0x8b,0x38,0x5c,0xe,\
+
+0x78,0x7d,0x5e,0xfa,0x8a,0x74,0xe6,0xee,0xcc,0xe8,\
+
+0x4d,0x43,0xc4,0xf9,0x22,0xce,0x60,0xb1,0x24,0x3a,\
+
+0x0,0xc4,0xc8,0xf8,0x0,0x1e,0x2b,0x34,0x11,0x7f,\
+
+0xdc,0x43,0xaa,0x3a,0x55,0x3,0x96,0xae,0x43,0xc0,\
+
+0x21,0x69,0x5b,0x4,0x80,0x82,0xb3,0xb7,0x64,0x6a,\
+
+0x99,0x6e,0x12,0x3d,0xdf,0xe,0x21,0x4d,0x2e,0xa9,\
+
+0xdf,0xf0,0x56,0x98,0x91,0x2b,0x17,0x1e,0x4a,0xa2,\
+
+0x6d,0x6d,0xc9,0xd1,0x90,0xd7,0x74,0x9,0x65,0xca,\
+
+0x88,0xe4,0xa2,0x82,0x4d,0xa3,0x15,0x31,0x67,0x2,\
+
+0x3,0x1,0x0,0x1,0x30,0xd,0x6,0x9,0x2a,0x86,\
+
+0x48,0x86,0xf7,0xd,0x1,0x1,0xb,0x5,0x0,0x3,\
+
+0x82,0x1,0x1,0x0,0x3,0x10,0x3a,0xb,0x6b,0xd4,\
+
+0x21,0xec,0xce,0xe4,0x56,0x29,0x0,0xf8,0x33,0x9f,\
+
+0xc1,0x81,0xb9,0xa6,0xc9,0x4f,0xa6,0x83,0x40,0xc3,\
+
+0x17,0x3f,0x6c,0xd7,0x18,0xab,0x8d,0x26,0xe4,0xa2,\
+
+0x89,0xf,0xa3,0x54,0x50,0xd6,0x80,0x61,0x56,0x4d,\
+
+0x68,0xee,0x16,0x7a,0x41,0x70,0x6,0x31,0x74,0x12,\
+
+0x24,0xf6,0x17,0x28,0xa9,0x46,0x30,0xde,0xfd,0x3f,\
+
+0x20,0x4a,0x3f,0xa7,0xcc,0x61,0xe7,0x3c,0x1b,0xaf,\
+
+0xf5,0xb6,0x16,0x27,0xf3,0xf7,0x51,0x5a,0xc1,0xdb,\
+
+0x6f,0x44,0x29,0x5d,0xc2,0x95,0x6c,0x69,0xc,0x22,\
+
+0x94,0x80,0x0,0x83,0x65,0xd0,0xb1,0xce,0x6e,0x1c,\
+
+0xa3,0xf5,0x7f,0x76,0x5a,0xe5,0x67,0x8b,0xfd,0x76,\
+
+0xf8,0xa9,0x37,0x82,0x80,0x90,0x1d,0x34,0x1,0x79,\
+
+0x28,0xf,0xec,0x76,0x88,0xaa,0xa8,0xb5,0xd8,0x2a,\
+
+0xc8,0xd0,0x2c,0xd8,0x7e,0x1b,0x8a,0x62,0x71,0x75,\
+
+0x97,0x0,0xcc,0x5d,0xc2,0x9,0x16,0xaa,0x7,0xdc,\
+
+0x63,0x3b,0x34,0x91,0xd1,0x64,0x78,0x7c,0x4b,0x13,\
+
+0x3d,0x75,0x8,0x70,0x28,0x61,0xf3,0xc0,0x16,0xa2,\
+
+0x7,0x40,0xe7,0xc9,0xb,0xd0,0xae,0xb9,0x39,0xf,\
+
+0x32,0x1e,0x37,0x87,0x7c,0x9a,0x59,0xa,0x5a,0x33,\
+
+0x54,0x2e,0xf2,0x54,0xa3,0xd9,0xed,0xf2,0x31,0x0,\
+
+0x56,0x25,0xd7,0x20,0x6,0x8c,0xc,0x52,0x70,0xc4,\
+
+0xd8,0xaa,0x2e,0xda,0xfd,0x19,0xb0,0x1e,0x9a,0x3,\
+
+0xb7,0x35,0xa0,0xaa,0x67,0x63,0x22,0xdf,0xce,0x2f,\
+
+0x9,0x22,0x6d,0x5a,0x25,0xb0,0x41,0x96,0xdc,0x54,\
+
+0x4f,0x1a,0x48,0xe8,0x81,0x4c,0x82,0x71,0xef,0x52,\
+
+0x3,0xc6,0x30,0x82,0x3,0xc2,0x30,0x82,0x2,0xaa,\
+
+0x2,0x1,0x1,0x30,0xd,0x6,0x9,0x2a,0x86,0x48,\
+
+0x86,0xf7,0xd,0x1,0x1,0xb,0x5,0x0,0x30,0x81,\
+
+0x98,0x31,0xb,0x30,0x9,0x6,0x3,0x55,0x4,0x6,\
+
+0x13,0x2,0x46,0x52,0x31,0xc,0x30,0xa,0x6,0x3,\
+
+0x55,0x4,0x8,0xc,0x3,0x49,0x44,0x46,0x31,0xe,\
+
+0x30,0xc,0x6,0x3,0x55,0x4,0x7,0xc,0x5,0x50,\
+
+0x41,0x52,0x49,0x53,0x31,0x1a,0x30,0x18,0x6,0x3,\
+
+0x55,0x4,0xa,0xc,0x11,0x47,0x4d,0x58,0x20,0x59,\
+
+0x6f,0x75,0x54,0x72,0x61,0x6e,0x73,0x61,0x63,0x74,\
+
+0x6f,0x72,0x31,0xd,0x30,0xb,0x6,0x3,0x55,0x4,\
+
+0xb,0xc,0x4,0x50,0x72,0x6f,0x64,0x31,0xb,0x30,\
+
+0x9,0x6,0x3,0x55,0x4,0x3,0xc,0x2,0x53,0x55,\
+
+0x31,0x33,0x30,0x31,0x6,0x9,0x2a,0x86,0x48,0x86,\
+
+0xf7,0xd,0x1,0x9,0x1,0x16,0x24,0x73,0x79,0x6c,\
+
+0x76,0x61,0x69,0x6e,0x2e,0x75,0x6d,0x64,0x65,0x6e,\
+
+0x73,0x74,0x6f,0x63,0x6b,0x40,0x79,0x6f,0x75,0x74,\
+
+0x72,0x61,0x6e,0x73,0x61,0x63,0x74,0x6f,0x72,0x2e,\
+
+0x63,0x6f,0x6d,0x30,0x1e,0x17,0xd,0x31,0x35,0x30,\
+
+0x31,0x31,0x33,0x31,0x31,0x31,0x31,0x33,0x32,0x5a,\
+
+0x17,0xd,0x32,0x35,0x30,0x31,0x31,0x30,0x31,0x31,\
+
+0x31,0x31,0x33,0x32,0x5a,0x30,0x81,0xb4,0x31,0xb,\
+
+0x30,0x9,0x6,0x3,0x55,0x4,0x6,0x13,0x2,0x46,\
+
+0x52,0x31,0xc,0x30,0xa,0x6,0x3,0x55,0x4,0x8,\
+
+0xc,0x3,0x49,0x64,0x46,0x31,0xe,0x30,0xc,0x6,\
+
+0x3,0x55,0x4,0x7,0xc,0x5,0x50,0x61,0x72,0x69,\
+
+0x73,0x31,0x15,0x30,0x13,0x6,0x3,0x55,0x4,0xa,\
+
+0xc,0xc,0x47,0x4d,0x58,0x5f,0x54,0x65,0x72,0x6d,\
+
+0x69,0x6e,0x61,0x6c,0x31,0x15,0x30,0x13,0x6,0x3,\
+
+0x55,0x4,0xb,0xc,0xc,0x52,0x26,0x44,0x5f,0x54,\
+
+0x65,0x72,0x6d,0x69,0x6e,0x61,0x6c,0x31,0x24,0x30,\
+
+0x22,0x6,0x3,0x55,0x4,0x3,0xc,0x1b,0x34,0x31,\
+
+0x33,0x41,0x45,0x36,0x44,0x34,0x33,0x38,0x2f,0x62,\
+
+0x37,0x34,0x35,0x34,0x63,0x39,0x33,0x65,0x31,0x36,\
+
+0x36,0x31,0x32,0x33,0x61,0x31,0x33,0x30,0x31,0x6,\
+
+0x9,0x2a,0x86,0x48,0x86,0xf7,0xd,0x1,0x9,0x1,\
+
+0x16,0x24,0x73,0x79,0x6c,0x76,0x61,0x69,0x6e,0x2e,\
+
+0x75,0x6d,0x64,0x65,0x6e,0x73,0x74,0x6f,0x63,0x6b,\
+
+0x40,0x79,0x6f,0x75,0x74,0x72,0x61,0x6e,0x73,0x61,\
+
+0x63,0x74,0x6f,0x72,0x2e,0x63,0x6f,0x6d,0x30,0x82,\
+
+0x1,0x22,0x30,0xd,0x6,0x9,0x2a,0x86,0x48,0x86,\
+
+0xf7,0xd,0x1,0x1,0x1,0x5,0x0,0x3,0x82,0x1,\
+
+0xf,0x0,0x30,0x82,0x1,0xa,0x2,0x82,0x1,0x1,\
+
+0x0,0xeb,0x6d,0x9a,0xf,0xbd,0xbf,0xbc,0x15,0xdb,\
+
+0xe7,0xba,0xcb,0x55,0x66,0xe4,0x93,0x27,0xe,0x23,\
+
+0x49,0x9e,0x6a,0x7c,0x55,0xbf,0x74,0x9d,0xb9,0x9b,\
+
+0xbb,0xc2,0x98,0x30,0xe4,0xc5,0xce,0x5,0x16,0xb,\
+
+0x40,0xa4,0xda,0x5c,0x13,0xb9,0xf1,0xe0,0xdd,0xe2,\
+
+0xf3,0x84,0xf3,0x5e,0x7d,0x4d,0x42,0x2b,0x1b,0x6f,\
+
+0xe2,0x43,0xf1,0xa,0x6f,0x4e,0x4a,0xb9,0x63,0x93,\
+
+0x62,0xba,0x43,0xa1,0x58,0x1e,0x79,0x12,0x2e,0xae,\
+
+0x82,0x73,0x4,0xe4,0x9,0x1,0x2,0x57,0x8e,0xc8,\
+
+0x6d,0x20,0x77,0x16,0xb,0xd8,0xb2,0x6e,0xcd,0xe3,\
+
+0x0,0x3b,0x48,0x69,0x5d,0x11,0x31,0xdb,0x29,0xbd,\
+
+0xb2,0x12,0xe7,0xb1,0x82,0xce,0x8,0x8b,0x13,0x57,\
+
+0x3a,0x4,0x6b,0xea,0xaa,0x19,0x4c,0xba,0x93,0xe,\
+
+0x45,0x9d,0x3b,0x8d,0xb1,0xf2,0x3d,0xd2,0x4f,0x21,\
+
+0x0,0x14,0x9d,0x7b,0xdf,0xe6,0x3a,0x5c,0xeb,0x16,\
+
+0x4b,0xe4,0xdd,0x65,0xb6,0x75,0xb8,0x19,0x5d,0x2f,\
+
+0x9d,0x4d,0xb2,0xf6,0x57,0xb0,0x2d,0xb4,0x26,0xc0,\
+
+0xc5,0x8a,0xb1,0x40,0xa6,0xd0,0xcc,0x49,0xa6,0x22,\
+
+0x96,0xa,0x32,0xff,0x6f,0xf3,0x1b,0xb4,0x6e,0xa4,\
+
+0x87,0x6b,0x3b,0xd9,0xde,0xc5,0xc9,0x9f,0xb7,0x49,\
+
+0xa8,0xd4,0x5f,0xa5,0xfb,0x56,0x5e,0x44,0xe0,0x8,\
+
+0x62,0x55,0x8d,0xb6,0xa8,0x3a,0x5e,0x2a,0x12,0x1e,\
+
+0xd4,0xf6,0xa6,0x6d,0xa0,0x7a,0xef,0xc8,0x87,0x14,\
+
+0x7a,0x35,0x2c,0x2d,0xad,0xe5,0xcc,0xf0,0xb3,0x91,\
+
+0x81,0xdc,0xc9,0xa6,0xdb,0x44,0x89,0x39,0x19,0x28,\
+
+0x87,0x22,0xd5,0xa,0xf5,0xa8,0x69,0x2,0x3,0x1,\
+
+0x0,0x1,0x30,0xd,0x6,0x9,0x2a,0x86,0x48,0x86,\
+
+0xf7,0xd,0x1,0x1,0xb,0x5,0x0,0x3,0x82,0x1,\
+
+0x1,0x0,0xa0,0x7e,0xb9,0x5f,0x98,0x4f,0x0,0x32,\
+
+0x9c,0x1e,0xcc,0x4e,0x24,0x43,0xa7,0x75,0xf0,0x95,\
+
+0x61,0xf3,0x7,0xf,0x8f,0x6b,0xd4,0x54,0x7b,0xc4,\
+
+0x5e,0xcc,0x66,0x4c,0xe,0xed,0xd8,0x36,0x25,0x6d,\
+
+0xe2,0x84,0x99,0x9,0xd2,0x66,0xc,0x78,0x8f,0x78,\
+
+0xa5,0x6a,0x4b,0x77,0xed,0x5a,0x5f,0xbd,0xbf,0x32,\
+
+0xf4,0x87,0x3,0xbc,0x6d,0x2e,0x38,0x6d,0x17,0x63,\
+
+0x1,0x8d,0x37,0x20,0x4c,0xb7,0x2e,0x39,0x3a,0x3e,\
+
+0x63,0x87,0x1c,0x81,0xd3,0xa0,0x62,0x6e,0x2e,0xb8,\
+
+0xce,0xa2,0xa5,0x3a,0xd6,0xff,0x5,0x32,0x21,0xb6,\
+
+0x1f,0xfa,0x40,0x7a,0xe7,0x28,0xdd,0x59,0xb8,0xcb,\
+
+0xfd,0xac,0xaf,0xbe,0x9f,0xc4,0x7c,0x7d,0xa4,0x4f,\
+
+0x45,0xc1,0x39,0x4a,0x5a,0x8f,0xb,0xd5,0x1e,0x58,\
+
+0x25,0xc3,0x3d,0x66,0x2a,0xb2,0x54,0x75,0x8b,0x6a,\
+
+0xfe,0x6e,0xa9,0xc3,0x2d,0x89,0xcf,0x8e,0xa,0xf1,\
+
+0x27,0x52,0x8d,0xf7,0xc,0x4e,0xb1,0x42,0x23,0x59,\
+
+0x20,0x3f,0x7c,0x2b,0x3f,0x0,0x9d,0xd4,0x7e,0xc9,\
+
+0xc4,0x9d,0x56,0xa5,0x20,0xdf,0xa2,0x53,0x6a,0xa6,\
+
+0x46,0x20,0xa7,0x4b,0x4a,0xee,0x3a,0x7,0x2,0x10,\
+
+0x22,0xc6,0xe9,0xb1,0x42,0x57,0x5f,0xd4,0x41,0x4c,\
+
+0xcd,0x6e,0xcd,0x36,0xd0,0x5,0x59,0x3c,0x13,0x26,\
+
+0xb5,0x26,0x9d,0x38,0x58,0x33,0x23,0x1c,0x45,0x69,\
+
+0x83,0x13,0x84,0xc7,0x8,0xe6,0x8,0x6a,0xdb,0x57,\
+
+0x52,0xad,0xb3,0x3f,0x1f,0x4a,0x2e,0x10,0x3a,0x62,\
+
+0x41,0x2e,0xe7,0x41,0xf5,0x5f,0xbf,0xa8,0xf9,0x48,\
+
+0x5f,0xe4,0xfe,0xa4,0x94,0xca,0xad,0x33,0x27,0x0,\
+
+0x41,0x3a,0xe6,0xd4,0x38,0x20,0x0,0x0,0x11,0x0,\
+
+0x41,0x3a,0xe6,0xd4,0x38,0x20,0x0,0x0};
+
+
+//client certif
+char testCertifClientYT[]="-----BEGIN CERTIFICATE-----\n\
+MIIDwDCCAqigAwIBAgIBATANBgkqhkiG9w0BAQUFADCBkTELMAkGA1UEBhMCRlIxDDAKBgNVBAg\
+MA0lERjEOMAwGA1UEBwwFUGFyaXMxEDAOBgNVBAoMB0dNWCBTQVMxDDAKBgNVBAsMA0dNWDEPMA0GA1UEAwwGR01YIENBM\
+TMwMQYJKoZIhvcNAQkBFiRxdWFuZy10cnVuZy5uZ3V5ZW5AeW91dHJhbnNhY3Rvci5jb20wHhcNMjEwOTE1MTM0NTUxWhc\
+NMjQwOTE1MTM0NTUxWjCBtDELMAkGA1UEBhMCRlIxDDAKBgNVBAgMA0lkRjEOMAwGA1UEBwwFUGFyaXMxFTATBgNVBAoMD\
+EdNWF9UZXJtaW5hbDEVMBMGA1UECwwMUiZEX1Rlcm1pbmFsMSQwIgYDVQQDDBs0MTNBRTZENDM4L2I3NDU0YzkzZTE2NjE\
+yM2ExMzAxBgkqhkiG9w0BCQEWJHN5bHZhaW4udW1kZW5zdG9ja0B5b3V0cmFuc2FjdG9yLmNvbTCCASIwDQYJKoZIhvcNA\
+QEBBQADggEPADCCAQoCggEBAIQmaVgCYCPMAnz2L8bcMNrOJb5R/ISnEa9wzXwkw3XaSEteozq+xrtKGIme5Pb+PQsSLT7\
+OYdFf76uk5PYRbS+ywlr8iyBnpF1cvjChpXDVQ2I4aDGKagYLFXzkNVBuxWX+CGE6LI3G54sZHnrbdIxhQ29xurJyRQNdu\
+2B7NS0bIZpa6mzv6kGFJWyvVCet+ehrNIfEdQarwoU9mhc1/2Z+GOv9QxroKUpI3qohN4C53S4ivE/8KNeOw33LpKOLjnh\
+Xi2GIWNqkiU6BubDaByWyBuprpqWicjrMpbH0+MIbqPvBDiOyZM0p6UzEQ+0ijFjzcSy5T2Ncd+0LcXc126MCAwEAATANB\
+gkqhkiG9w0BAQUFAAOCAQEAmqkC5HUZ3VkKtQBMi8IgmoDM688ulxG28XBOfo9o4DZDOVhXuPuxCXUPWOVChcMdBolItZD\
+LiNM4i1cavMqJb+oAxCulbcvOtFOR9jtrY783GJJkwKf2tuXJt7NsW/rZwGuBE6rFSvHz4f3QwjK/j5PbejtiFyCgyJ+kU\
+x+pgPiaAZnSRidd0LgJwlJnfVWUJAZeFueOWA3YrxH+n104ew76U9669nKGmRCxHbjwhgpIkkf46xoNFNKgx1r1mEHChjJ\
+vbcMlj5iov68Z85ORPR4syh2Jz6urP9xNTA/0NX5biofMwO/9Km371wo9E+AeLJBybp9AYKlyc53p8fn58w==\n\
+-----END CERTIFICATE-----";
+
+//client key
+char testKeyClientYT[]="-----BEGIN PRIVATE KEY-----\n\
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCEJmlYAmAjzAJ89i/G3DDaziW+UfyEpxGvcM18JMN12khL\
+XqM6vsa7ShiJnuT2/j0LEi0+zmHRX++rpOT2EW0vssJa/IsgZ6RdXL4woaVw1UNiOGgximoGCxV85DVQbsVl/ghhOiyNxueL\
+GR5623SMYUNvcbqyckUDXbtgezUtGyGaWups7+pBhSVsr1QnrfnoazSHxHUGq8KFPZoXNf9mfhjr/UMa6ClKSN6qITeAud0u\
+IrxP/CjXjsN9y6Sji454V4thiFjapIlOgbmw2gclsgbqa6alonI6zKWx9PjCG6j7wQ4jsmTNKelMxEPtIoxY83EsuU9jXHft\
+C3F3NdujAgMBAAECggEBAILQr1lSyK7G5fOjlHnrQGVoyg4ThMAfzi74oEDy95YzZXtOjJC7h2ihGZcp9ofV9sF91dIlZMlp\
+iYxFJ+26JHaiIykEdAi48AkHpLHpYidGxXR2WBYqaXfgAv5lva0IalnjVZJBjxctvcmBLR37He1U3vd0Apdg7JY/dBw2+tXR\
+X8ISseSn7FiMWq9hRMuYKJY47sxn+hYbD8Giow8DRRW9qD7bq4PlpLBSxWFUw3DXJySeoub5Df6+o000Z18ZIQh2FKA4Ub9b\
+BcZDSX4+IzOSbHxjYPAnF6YAk1ivPFdMs2loz4eT536Go71Kc7+G7Svt/BwrGTXKAKi5DD0KAJkCgYEA5R6AbXQuJWoUw+On\
+Lzp6o92xAhyqCtAnGwjvk2SI6A+EPjvvsRkCdENCUCD4GvHvz8QpY+xgS/QVln/h7AJRvqDArd4PiDxAD929HdGkHY7zdQLU\
+vrEc+b//2bKr4/8JPtj4eHkk+ng2PV2VvCid2SGB5cxuUwJ8ZC9A5huVQD8CgYEAk6d7sDrBXMpNw+xWmlV8pyrQhw5NBWMZ\
+nkDE6PdB11GpY/DuK47NXpnnVztC1DBTjXXSJ604+pljQFYEgTWgfNKj+UXYwFy+MfjzLFi4BRYInATktIInIxtE6MhZp4d+\
+ipyGtKAZ/z8F6seE7dAFuqzYhjvctkT2y/S2pgZlS50CgYEAmiWXSgxsL4fbSJ+VD1VMxYqVWFJopLW+WZX9eTCeW2J1GlnA\
+vWmSGR5XMwm7YoV7TlEvd6bEctVY4NRQ7zPwQ0xr1Y4c7Q98GjCY18L/o1NVwFeTQmhukij2vURUGSSw17OqF4OJuWm/NDIO\
+V3UMHdVJS43qe7akcdLI2webtokCgYEAkDfqa/s3mnZO9qsE+8G7+1uqSgAB4t0kzJneut2nBbTRirhtKUZV+azBdUaAw9hg\
+A6+tEOv013CyrMhXpgzHMKRdXMCIMXtkmlLa0dnmA7G9vwZYjKcDqxqbd/MY/rUtOB4ixJIMUm8wTF2MzOt+bRMeeh5GOhGq\
+LRRcwlVE41ECgYBT2zOUOTKCU56XkuC6ai2S77smACBERGG3Tef5dVcOyHITLlOIykBEpMvqqwo08xTxzAk8mpfQpWIvonui\
+LzqDMkW4cfHfhBrwdReUPPOBTVsHNUKJ0cs4d0niAHXrS99YXXz3me7LtfzrtZwu1PkVVl5hmZo/pX3mU0PFm8lMAg==\n\
+-----END PRIVATE KEY-----";
+
+static const char* apn_list[NB_APN_LIST] =
+{
+    APN_ORANGE,
+    APN_BOUYGUES,
+    APN_LYCA,
+    APN_CORIOLIS
+} ;
+
+void requestResult_ct_cb (https_request_handler_t request_handler){
+
+    PRINTF("**Request result %d\r\n", request_handler.resp->resp_Code);
+    PRINTF("**Binary %s\r\n", request_handler.resp->data);
+    socket_handler_ct.request_handle.resp->resp_Code= request_handler.resp->resp_Code;
+    send_request_done=1;
+    network_set_operation_done();
+}
+
+void connect_cellular_onFinish_cb (uint8_t result){
+
+    PRINTF_YT("** cellular on finish connect result %d\r\n", result);
+    PRINTF_YT("**1 status of cellular : %d\r\n",
+            UCube_api_get_cellular_status().is_connected);
+    network_set_operation_done();
+}
+
+void disconnect_cellular_onFinish_cb (uint8_t result){
+
+    PRINTF_YT("** cellular on finish disconnect result %d\r\n", result);
+    PRINTF_YT("**2 status of cellular : %d\r\n", UCube_api_get_cellular_status().is_connected);
+    network_set_operation_done();
+}
+
+void cellular_onCellularStatusChange_cb (DSS_Net_Evt_Type_e result){
+
+    PRINTF_YT("** cellular on status change  %d\r\n", result);
+    PRINTF_YT("**3 status of cellular : %d\r\n", UCube_api_get_cellular_status().is_connected);
+//    network_set_operation_done();
+}
+
+/*
+ * @brief    config cellular network
+ * @return    error
+ */
+error_t config_cellular_network(network_handler_t * network_handler)
+{
+    uint8_t list[NB_APN_LIST * SVPP_COM_APP_NAME_LEN + 10];
+    uint8_t index = 0;
+    uint8_t idx_apn = 0;
+    error_t err=ERRORNO;
+    svpp_com_line_desciption_t line;
+    uint8_t config;
+    memset((uint8_t*)&customer_app_ctx.rpc_ctx.param->hmi_drv_displaylistboxwithoutki.
+            tx_msg, 0,
+            sizeof(svpp_com_tx_hmi_drv_displaylistboxwithoutki_t));
+    customer_app_ctx.rpc_ctx.param->hmi_drv_displaylistboxwithoutki.tx_msg.
+    timeout = 90;
+    customer_app_ctx.rpc_ctx.param->hmi_drv_displaylistboxwithoutki.tx_msg.
+    title_length =  1;
+    customer_app_ctx.rpc_ctx.param->hmi_drv_displaylistboxwithoutki.tx_msg.
+        font = 1;
+
+    for (idx_apn = 0; idx_apn < NB_APN_LIST; idx_apn++)
+    {
+        list[index++] = (idx_apn + 1) + 0x30;
+        list[index++] = '-';
+        strcpy((char*)&list[index], apn_list[idx_apn]);
+        index += strlen(apn_list[idx_apn]);
+        list[index++] = '\n';
+        list[index++] = 0x00;
+    }
+
+    customer_app_ctx.rpc_ctx.param->hmi_drv_displaylistboxwithoutki.tx_msg.pList =
+            list;
+    customer_app_ctx.rpc_ctx.param->hmi_drv_displaylistboxwithoutki.tx_msg.list_length =
+            index;
+
+    err = svpp_com_send_rpc(&customer_app_ctx.rpc_ctx,
+            SVPP_COM_HMI_DRV_DISPLAYLISTBOXWITHOUTKI_CMD_NB,
+            SVPP_COM_RPC_NO_TIMEOUT);
+
+    if (!err)
+    {
+        config = customer_app_ctx.rpc_ctx.param->hmi_drv_displaylistboxwithoutki.
+                rx_msg.selected_item;
+        if ((config > 0) && (config <= NB_APN_LIST))
+        {
+            strlcpy(network_handler->cellular_conf.apn,
+                    apn_list[config - 1],
+                    QAPI_DSS_CALL_INFO_APN_MAX_LEN);
+            PRINTF_YT("selected APN is %s\r\n", apn_list[config - 1]);
+        }
+    }
+
+    return err;
+}
+
+error_t connect_interface_cellular(network_handler_t * network_handler)
+{
+    error_t err = ERRORNO;
+    UCube_api_register_cellular_status_change(
+                                            cellular_onCellularStatusChange_cb);
+    err = UCube_api_connect_cellular(500000,
+                                        connect_cellular_onFinish_cb,
+                                        network_handler);
+    return err;
+}
+
+error_t disconnect_interface_cellular(network_handler_t * network_handler)
+{
+    error_t err = ERRORNO;
+    err = UCube_api_disconnect_cellular(500000,
+                                        disconnect_cellular_onFinish_cb,
+                                        network_handler);
+    return err;
+}
+
+void wifi_onWifiStatusChange_cb (DSS_Net_Evt_Type_e result)
+{
+    PRINTF_YT("** cellular on status change  %d\r\n", result);
+    PRINTF_YT("**3 status of cellular : %d\r\n",
+            UCube_api_get_cellular_status().is_connected);
+}
+
+void connect_wifi_onFinish_cb (uint8_t result)
+{
+    PRINTF_YT("** wifi on finish connect result %d\r\n", result);
+    PRINTF_YT("**1 status of wifi : %d\r\n",
+            UCube_api_get_cellular_status().is_connected);
+    network_set_operation_done();
+}
+
+void disconnect_wifi_onFinish_cb (uint8_t result)
+{
+    PRINTF_YT("** wifi on finish disconnect result %d\r\n", result);
+    PRINTF_YT("**2 status of wifi : %d\r\n",
+                UCube_api_get_wifi_status().is_connected);
+    network_set_operation_done();
+}
+
+error_t connect_interface_wifi(network_handler_t * network_handler)
+{
+    error_t err = ERRORNO;
+    strlcpy(network_handler->wifi_conf.ssid,
+            WIFI_SSID,
+            DRIVER_WIFI_SSID_MAX_LEN);
+    strlcpy(network_handler->wifi_conf.password,
+            WIFI_PASSWORD,
+            DRIVER_WIFI_PASSWORD_MAX_LEN);
+    UCube_api_register_wifi_status_change(wifi_onWifiStatusChange_cb);
+    err = UCube_api_connect_wifi(10000,
+                                    connect_wifi_onFinish_cb,
+                                    network_handler);
+    return err;
+}
+
+error_t disconnect_interface_wifi(network_handler_t * network_handler)
+{
+    error_t err = ERRORNO;
+    err = UCube_api_disconnect_wifi(100000,
+                                    disconnect_wifi_onFinish_cb,
+                                    network_handler);
+    return err;
+}
+
+error_t read_body_file(    uint8_t * pFile_buf_read , uint32_t * payload_size)
+{
+    qapi_FS_Status_t ret_val = -1;
+    //uint8 buf[1940] = {0};
+    int file_handle_read;
+    struct qapi_FS_Stat_Type_s sbuf_read;
+    uint32 real_read_read;
+    int data_size_read = 0;
+
+    ret_val = qapi_FS_Stat(CERT_PATH, &sbuf_read);
+    if (ret_val != 0)
+    {
+        return -1;
+    }
+    ret_val = qapi_FS_Open(CERT_PATH, QAPI_FS_O_RDONLY_E , &file_handle_read);
+    if(ret_val!= 0)
+    {
+        PRINTF("open %s failed \r\n",CERT_PATH);
+        return -1;
+    }
+    ret_val = qapi_FS_Read(file_handle_read, pFile_buf_read, sbuf_read.st_size, &real_read_read );
+
+    if(ret_val != 0 )// real_read_read != sbuf_read.st_size)
+    {
+        PRINTF("*******************************"
+                "******************"
+                "read %s failed error %d real_read_read %d sbuf_read.st_size%d\r\n",
+                CERT_PATH,
+                ret_val,
+                real_read_read,
+                sbuf_read.st_size
+                );
+        return -1;
+    }
+    PRINTF("*******************************payload size : %d ",real_read_read);
+    *payload_size = sbuf_read.st_size;
+    return ret_val;
+}
+
+void connect_network(void)
+{
+    uint8_t interface=0;
+    UCube_api_set_preferred_network_interface(PREFERRED_INTERFACE_CELLULAR);
+    interface= UCube_api_get_preferred_network_interface();
+    PRINTF_YT("---- selected interface: %d\r\n",interface);
+    connect_interface_cellular(&network_handler_ct);
+}
+
+error_t init_http_request(socket_handler_t * socket_handler) {
+
+    error_t err = ERRORNO;
+    PRINTF("start connect now\r\n");
+
+    PRINTF("start prepare request now\r\n");
+
+    network_ctx.network_handle.network_status.preferred_interface =
+    //      PREFERRED_INTERFACE_CELLULAR ;
+            PREFERRED_INTERFACE_WIFI;
+
+
+    //add server certificate
+    if (WIFI_AddServerCertificate(testCertifServerYT,sizeof(testCertifServerYT),1) == WIFI_retCodeSUCCESS)
+    {
+        PRINTF("Server certificate added \r\n");
+    }
+    else
+    {
+        PRINTF("Error while sending the server certificate \r\n");
+        qapi_Timer_Sleep(5000, QAPI_TIMER_UNIT_MSEC, true);//5s delay
+    }
+
+    qapi_Timer_Sleep(1000, QAPI_TIMER_UNIT_MSEC, true);//1s delay
+
+    // define url of request
+    memset(socket_handler->request_url, 0, sizeof(socket_handler->request_url));
+    sprintf((char*)socket_handler->request_url, HTTP_REQUEST_URL_MDM);
+    socket_handler->url_length = strlen((const char *)socket_handler->request_url);
+    socket_handler->request_type = HTTPS_CLIENT_POST_E ;
+    socket_handler->requestResult_cb = requestResult_ct_cb;
+    //SSL
+
+
+#if 0
+    socket_handler->ssl_conf.ca_cert.data = (uint8_t *)testCertifServerYT;
+    socket_handler->ssl_conf.ca_cert.size = sizeof(testCertifServerYT);
+
+    socket_handler->ssl_conf.ca_cert.data = (uint8_t *)testCertifClientYT;
+    socket_handler->ssl_conf.ca_cert.size = sizeof(testCertifClientYT);
+
+    socket_handler->ssl_conf.ca_cert.data = (uint8_t *)testKeyClientYT;
+    socket_handler->ssl_conf.ca_cert.size = sizeof(testKeyClientYT);
+#endif //0
+    socket_handler->ssl_conf.wifi_certificate_conf.server_certif_nbr =
+            WIFI_USE_SERVER_CERTIF_1_MODE;
+
+    socket_handler->ssl_conf.verify_method= HTTPS_SSL_ONEWAY_METHOD;
+    // add header list
+/*    sprintf((char*)request_header_list[0].type, USER_AGENT_T);
+    sprintf((char*)request_header_list[0].value , USER_AGENT);*/
+    sprintf((char*)request_header_list[0].type, CONTENt_TYPE_T);
+    sprintf((char*)request_header_list[0].value , CONTENT_TYPE);
+    sprintf((char*)request_header_list[1].type, DEVICE_ID_T);
+    sprintf((char*)request_header_list[1].value , DEVICE_ID);
+    sprintf((char*)request_header_list[2].type, ID_TYPE_T);
+    sprintf((char*)request_header_list[2].value , ID_TYPE);
+    sprintf((char*)request_header_list[3].type, CONTENT_LENGHT_T);
+    sprintf((char*)request_header_list[3].value , "%d",sizeof(testMdmPayload));
+    socket_handler->request_handle.header_list = request_header_list;
+    socket_handler->request_handle.header_list_size = 3;
+
+/*    read_body_file(http_request_payload,&http_request_payload_size);
+    PRINTF("payload size %d",http_request_payload_size);*/
+
+    socket_handler->request_handle.payload = (uint8_t *) testMdmPayload;
+    socket_handler->request_handle.payload_size = sizeof(testMdmPayload); // 32768 ;
+    UCube_api_send_http_request(socket_handler);
+
+    return err;
+}
+
+
+void test_san_wifi(void)
+{
+    WIFI_AP_t AP_list[MAX_IDS_FROM_SCAN];
+    uint16_t AP_num;
+    WIFI_Scan( AP_list, &AP_num );                      //scan for APs
+
+    PRINTF("ssid count = %d \r\n",AP_num);
+    for (uint16_t i=0;i<AP_num;i++)
+    {
+        PRINTF("ssid number %d = %s  \r\n",i,AP_list[i].ssid);
+    }
+
+    qapi_Timer_Sleep(10000, QAPI_TIMER_UNIT_MSEC, true);//10s delay
+}
+
+void test_get_rss_id(void)
+{
+    int16_t rssiValue = 0;
+
+    WIFI_GetRssi(&rssiValue);                               //get the rssi value, and for testing send s a http req
+
+    PRINTF("RSSI %d \r\n",rssiValue);
+    qapi_Timer_Sleep(1000, QAPI_TIMER_UNIT_MSEC, true);//10s delay
+}
+
+void on_finish_wifi(uint8_t status)
+{
+}
+
+void onFinish_connect_wifi_Access_point_cb (uint8_t result)
+{
+    PRINTF_YT("** wifi on finish AP connect result %d\r\n", result);
+    PRINTF_YT("**1 status of wifi : %d\r\n", UCube_api_get_cellular_status().is_connected);
+    wifi_connect_ap_complete = 1;
+    PRINTF_YT("****************************************\r\n"
+           "****************************************\r\n"
+           "********wifi_connect_ap_complete********\r\n");
+}
+
+uint8_t connect_wifi_access_pnt(void)
+{
+    uint8_t ret = ERRORNO;
+    ret = UCube_api_connect_wifi_ap(onFinish_connect_wifi_Access_point_cb);
+    return ret;
+}
+
+uint8_t disconnect_wifi_access_pnt(void)
+{
+    error_t err = ERRORNO;
+    err = UCube_api_disconnect_wifi_ap();
+    return err;
+}
+
+void request_paris_temperature_cb (https_request_handler_t request_handler){
+
+    PRINTF_YT("**Request result %d\r\n", request_handler.resp->resp_Code);
+    download_complete = 1;
+    PRINTF_YT("ucubeAPI ok ********************\r\n"
+        "*******************\r\n"
+        "********download_complete:%d********************\r\n",
+        download_complete);
+}
+
+error_t init_paris_temperature_request(socket_handler_t * socket_handler)
+{
+
+    error_t err = ERRORNO;
+    uint8_t timeout_1s_cnt = 20;
+
+    // define url of request
+    memset(socket_handler->request_url, 0, sizeof(socket_handler->request_url));
+    sprintf((char*)socket_handler->request_url, HTTP_REQUEST_URL_TEMP);
+    socket_handler->url_length = strlen((const char *)socket_handler->request_url);
+    socket_handler->request_type = HTTPS_CLIENT_POST_E ;
+    socket_handler->requestResult_cb = request_paris_temperature_cb;
+    socket_handler->request_handle.resp = &response_paris_temp;
+    socket_handler->ssl_conf.verify_method = HTTPS_SSL_NO_METHOD;
+
+    UCube_api_send_http_request(socket_handler);
+    download_complete = 0;
+
+    while (timeout_1s_cnt)
+    {
+        if (download_complete)
+        {
+            char str_temp[10];
+            char str_res[100];
+            int len = strnlen(
+                    (const char *)socket_handler->request_handle.resp->data,
+                    sizeof(response_buffer));
+            memcpy(&response_buffer,
+            (const char *)socket_handler->request_handle.resp->data,
+            len);
+            json_scanf((const char *)(response_buffer), len,
+                        "{main: {temp:%s}}", str_temp);
+            uint16_t size = sprintf((char*)str_res,
+                                    "Paris Temperature is : %s\n",
+                                    str_temp);
+            display_message((uint8_t *)str_res, size + 1,0xFF,0xFF,50);
+            break;
+        }
+        else
+        {
+            uint8_t msg[] = "Loading ... \n";
+            err = display_message(msg, sizeof(msg),1,0xFF,50);
+            qapi_Timer_Sleep(10, QAPI_TIMER_UNIT_MSEC, true);
+            timeout_1s_cnt--; // display timeout is 1s
+        }
+    }
+
+    return err;
+}
+
+
+void  init_mdm_request(void)
+{
+    download_mdm_complete = 0;
+    WIFI_state_t wifiState = WIFI_STATE_DISABLED;
+    WIFI_retCode_t retCode = WIFI_retCodeSUCCESS;
+    int16_t rssiValue = 0;
+    WIFI_rBState_t requestResponseStatus;
+    uint16_t requestResponseSize = 0;
+    uint16_t totalChuckCount = 0;
+    char getReqResult[HTTP_RESPONSE_PAYLOAD_MAX_LEN];
+    error_t err = ERRORNO;
+    uint8_t triesCounter = 0;
+    WIFI_Request_t wifiRequest;
+
+    memset(getReqResult, 0, HTTP_RESPONSE_PAYLOAD_MAX_LEN);
+    memset(&wifiRequest, 0, sizeof(wifiRequest));
+
+    char host[]="public-api.mdm-dev.youtransactor.com";
+    char path[]="/MDM/jaxrs/public/v1/dongle/register";
+    char header[]="Content-Type:application/octet-stream,x-device-id:070040300299,x-id-type:C3";
+
+    wifiRequest.httpHttpsMode = WIFI_HTTPS_MODE;
+    wifiRequest.getPostMode = WIFI_POST_MODE;
+    wifiRequest.serverCertifMode = WIFI_USE_SERVER_CERTIF_1_MODE;
+    wifiRequest.clientCertifMode = WIFI_DO_NOT_USE_CLIENT_CERTIF_MODE;
+    wifiRequest.host = host;
+    wifiRequest.hostLen = strlen(host);
+    wifiRequest.path = path;
+    wifiRequest.pathLen = strlen(path);
+    wifiRequest.header = header;
+    wifiRequest.headerLen = strlen(header);
+    wifiRequest.payload = testMdmPayload;
+    wifiRequest.payloadLen = sizeof(testMdmPayload);
+
+    while (1)
+    {
+        while(1)
+        {
+            //add server certificate
+            if (WIFI_AddServerCertificate(testCertifServerYT,sizeof(testCertifServerYT),1) == WIFI_retCodeSUCCESS)
+            {
+                PRINTF("Server certificate added \r\n");
+            }
+            else
+            {
+                PRINTF("Error while sending the server certificate \r\n");
+                qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//5s delay
+                break;// exit and restart
+            }
+            qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//1s delay
+
+           //send HTTP/S request
+            if (WIFI_SendHttpHttpsGetPostRequest(wifiRequest) == WIFI_retCodeSUCCESS)
+            {
+                PRINTF("WIFI send request ok \r\n");
+            }
+            else
+            {
+                PRINTF("Error while sending the request \r\n");
+                qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//5s delay
+                break;// exit and restart
+            }
+
+            triesCounter = 0;
+            retCode = WIFI_retCodeSUCCESS;
+            do
+            {
+                triesCounter++;
+                PRINTF("wait for response after http/s request\r\n");
+                //get the HTTP/S request status
+                retCode = WIFI_GetRequestResponseStatus(&requestResponseStatus);
+
+                PRINTF("RequestResponseStatus %d , return code = %d\r\n",requestResponseStatus,retCode);
+
+                qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//500ms delay
+
+            } while ((retCode == WIFI_retCodeSUCCESS) && (requestResponseStatus != WIFI_rBState_READY) && (triesCounter<3));
+
+            if ((retCode == WIFI_retCodeSUCCESS) && (requestResponseStatus == WIFI_rBState_READY))
+            {
+                PRINTF("Request status = ready\r\n");
+            }
+            else
+            {
+                PRINTF("Request status = not ready or Error\r\n");
+                qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//5s delay
+                break;// exit and restart
+            }
+
+
+            if (requestResponseStatus == WIFI_rBState_READY)
+            {
+                //get the request's infos (size and chunk count)
+                PRINTF("Get request response infos\r\n");
+                retCode = WIFI_GetRequestResponseInfos(&requestResponseSize,&totalChuckCount);
+                if (retCode == WIFI_retCodeSUCCESS)
+                {
+                    PRINTF("RequestResponseInfos size = %d  chunk count = %d\r\n",requestResponseSize,totalChuckCount);
+                }
+                else
+                {
+                    PRINTF("RequestResponseInfos Error\r\n");
+                    qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//5s delay
+                    break;// exit and restart
+                }
+
+                //get the request response data
+                retCode = WIFI_ReceiveRequestResult( getReqResult ,requestResponseSize,totalChuckCount ); //get the request's data
+
+                if( retCode ==  WIFI_retCodeSUCCESS)
+                {
+                    PRINTF("Get request response received, OK\r\n");
+                    PRINTF("**** printing response ****\r\n");
+                    printDataChar(getReqResult,requestResponseSize);
+                    PRINTF("**** END response ****\r\n");
+                    download_mdm_complete = 1;
+                }
+                else
+                {
+                    PRINTF("Get request response NOT received, NOK\r\n");
+                    qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//5s delay
+                    break;// exit and restart
+                }
+
+            }
+            else
+            {
+                PRINTF("Error ,request response timed out \r\n");
+            }
+
+            //reset the request buffer
+            retCode = WIFI_ResetReceiveRequestBuffer();
+            if( retCode ==  WIFI_retCodeSUCCESS)
+            {
+                PRINTF("Reset buffer, OK \r\n");
+                break;
+            }
+            else
+            {
+                PRINTF("Reset buffer error \r\n");
+                qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//5s delay
+                break;// exit and restart
+            }
+
+            PRINTF("End******************************************************\r\n");
+            qapi_Timer_Sleep(100, QAPI_TIMER_UNIT_MSEC, true);//5s delay
+
+        }
+
+        if (download_mdm_complete)
+        {
+           break;
+        }
+
+    }
+
+}
+
+void send_wifi_ntw(socket_handler_t * socket_handler)
+{
+    error_t err = ERRORNO;
+
+    uint8_t msg1[] = "Loading ... \n";
+    display_message(msg1, sizeof(msg1),0x1,0xFF,50);
+
+    init_mdm_request();
+    download_complete = 0;
+    int trf_to_ms = 1000;
+
+    while(1)
+    {
+        if (trf_to_ms)
+        {
+            if(download_mdm_complete){
+
+                uint8_t msg[100];
+                uint16_t  size = sprintf((char*)msg, "MDM response received:\n");
+                display_message(msg,sizeof(msg),0xFF,0xFF,50);
+                break;
+            }
+            else
+            {
+                uint8_t msg[] = "Loading ... \n";
+                display_message(msg, sizeof(msg),1,0xFF,50);
+                qapi_Timer_Sleep(10, QAPI_TIMER_UNIT_MSEC, true);
+                trf_to_ms -= 10;
+            }
+        }
+        else
+        {
+            break;
+        }
+
+    }
+}
+
+#elif defined(CONFIG_PC)
+#endif //CONFIG_XX
+
