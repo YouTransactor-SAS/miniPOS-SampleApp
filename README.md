@@ -1,4 +1,10 @@
-##### [Release 1.0.0.9](file:md_releasenote.html)
+# YouTransactor uCube Touch miniPOS 
+
+###### Release 1.0.0.0
+
+<p>
+  <img src="https://user-images.githubusercontent.com/59020462/86530448-09bf9880-beb9-11ea-98f2-5ccc64ed6d6e.png">
+</p>
 
 This repository provides a step by step documentation for YouTransactor's miniPOS SDK, that enables you to integrate our proprietary card terminal(s) to accept credit and debit card payments (incl. VISA, MasterCard, American Express and more). The relation between the MODEM and the secure Processor(SVPP) is a Master-Slave relation, so the MODEM  drives the SVPP  by calling diffrent available commands via SPI interface.  
 The main function of the SDK is to send RPC commands to the SVPP  in order to drive it. The SDK provides also a payment, update and log APIs.  
@@ -61,29 +67,28 @@ uCube Touch miniPOS integrates a Quectel modem (BG95-M3) and a St-microelectroni
  
 #### 1.2 Application Architecture
 This diagrams describes the general software architecture. Only the uCubeAPI methods and the RPC commands are public and you can call them.  
-<img src="../../images/sdk_architecture.png"  width="900" height="500" />  
+
+![sdk_architecture](https://user-images.githubusercontent.com/59020462/159264003-747c1615-9525-42f9-8b8f-acaef9d29e74.png) 
 
 The demo application we provide display a menu as a first screen, user will be able to select one of the options example 'Payment', so the application will call the UCube_api_pay with a uCubePaymentRequest intance as input.   
 This starts a transaction and enable the contact and the contactless readers. Depends on the activated reader one of the transaction flows will be called.  
 This sequence diagram below shows the interaction between different soft modules before the menu is showen and when user press Payment option.
   
-<img src="../../images/sequence.png" alt=""  /> 
+![sequence](https://user-images.githubusercontent.com/59020462/159264182-f60ffd83-e5df-40d5-8a20-067e90bc9d75.png)
 
 ### 2. Transaction Flow : Contact
-<p><img src="../../images/contact_flow.jpeg" alt="" width="1000" height="500" /></p>
+
+![contact_flow](https://user-images.githubusercontent.com/59020462/159264254-7ae827f1-df93-4463-ac2b-0e6deee01c48.jpeg)
 
 ### 3. Transaction Flow : Contactless
-<p><img src="../../images/contactless.jpeg" alt="contactless.jpeg" width="1000" height="500" /></p>
+
+![contactless](https://user-images.githubusercontent.com/59020462/159264392-375f7822-2956-4810-aace-772eb9df45e5.jpeg)
 
 ### 4. UCubeAPI
-- The APIs provided by UCubeAPI are:
+
+The APIs provided by UCubeAPI are:
+
 ```c
- 
-
-
-
-    
-
 // start a payment
  /*
   * use this api when you need to start a transaction
@@ -95,50 +100,40 @@ This sequence diagram below shows the interaction between different soft modules
   * from the begin of the transaction, they can be updated during that and all output variable 
   * are set during and at the end of the transaction. 
   * */ 
-     
 error_t  UCube_api_pay(UCubePaymentRequest_t* uCubePaymentRequest);
 
-
-
 // connect to network using cellular connectivity
-
 error_t  UCube_api_connect(network_handler_t * network_handler);
 
-
-
 // send a HTTP request
-
 error_t  UCube_api_send_http_request(socket_handler_t * socket_handler);
 
-
 // send  RPC 
-
 uint8_t UCube_api_send_Data(svpp_com_transaction_param_u  rpc_param,
          uint32_t rpc_id);
 ```
+
 #### 4.1 Payment  
 
-- The SDK implements the payment state machine, both contact and contactless. You configure your transaction using the uCubePaymentRequest_t object by specifing a value for each attribut, for instance, the transaction amount, currency, type, ...etc.  
+The SDK implements the payment state machine, both contact and contactless. You configure your transaction using the uCubePaymentRequest_t object by specifing a value for each attribut, for instance, the transaction amount, currency, type, ...etc.  
 
 #### pay API
 
-- Create a Payment Request variable
-```c
+Create a Payment Request variable :
 
+```c
   UCubePaymentRequest_t UCubePaymentRequest_ct;
-  ```
+```
 
-- Call the UCube_api_pay and pass a pointer to the uCubePaymentRequest:
+Call the UCube_api_pay and pass a pointer to the uCubePaymentRequest:
+
 ```c
-
   UCube_api_pay(&UCubePaymentRequest_ct);
-  ```  
+```  
 
+The input parameter of Pay API is the uCubePaymentRequest. This class contains all input variables of a payment. At the begin of the transaction, the SDK create a new instance of PaymentContext and save into it all the input values. Here is an example of preparing a uCubePaymentRequest object, all variables are explained in the PaymentContext section :
 
-- The input parameter of Pay API is the uCubePaymentRequest. This class contains all input variables of a payment. At the begin of the transaction, the SDK create a new instance of PaymentContext and save into it all the input values. Here is an example of preparing a uCubePaymentRequest object, all variables are explained in the PaymentContext section :
 ```c
-
-
 error_t preparePaymentRequest(UCubePaymentRequest_t * UCubePaymentRequest) {
 
     error_t err = ERRORNO;
@@ -147,61 +142,33 @@ error_t preparePaymentRequest(UCubePaymentRequest_t * UCubePaymentRequest) {
     
     Currency CURRENCY_EUR;
     
-
     CardReaderType readerList[2] = {ICC,NFC};
-   
-   
-    
+
     Date date;
-  
-  
     
     uint16_t authorizationPlainTags[]={TAG_4F_APPLICATION_IDENTIFIER,TAG_50_APPLICATION_LABEL };
-  
-  
     
     uint16_t authorizationSecuredTags[]={
-    
             TAG_SECURE_5A_APPLICATION_PRIMARY_ACCOUNT_NUMBER,
-            
             TAG_SECURE_57_TRACK_2_EQUIVALENT_DATA,
-            
-            TAG_SECURE_56_TRACK_1_DATA  ,
-            
-            TAG_SECURE_5F20_CARDHOLDER_NAME  ,
-            
-            TAG_SECURE_5F24_APPLICATION_EXPIRATION_DATE ,
-            
-            TAG_SECURE_5F30_PAYMENT_CODE ,
-            
-            TAG_SECURE_9F0B_CARDHOLDER_NAME_EXTENDED  ,
-            
+            TAG_SECURE_56_TRACK_1_DATA,
+            TAG_SECURE_5F20_CARDHOLDER_NAME,
+            TAG_SECURE_5F24_APPLICATION_EXPIRATION_DATE,
+            TAG_SECURE_5F30_PAYMENT_CODE,
+            TAG_SECURE_9F0B_CARDHOLDER_NAME_EXTENDED,
             TAG_SECURE_9F6B_TRACK_2_DATA
-            
     };
   
-  
-    
     uint16_t finalizationPlainTags[]={
-    
               TAG_9F06_APPLICATION_IDENTIFIER__TERMINAL,
-              
               TAG_9F10_ISSUER_APPLICATION_DATA,
-              
-              TAG_9F1A_TERMINAL_COUNTRY_CODE
-              
+              TAG_9F1A_TERMINAL_COUNTRY_CODE    
     };
- 
- 
     
     uint16_t finalizationSecuredTags[]={
-    
             TAG_SECURE_5F24_APPLICATION_EXPIRATION_DATE,
-            
-            TAG_SECURE_5F30_PAYMENT_CODE
-            
+            TAG_SECURE_5F30_PAYMENT_CODE        
     };
-
 
     UCubePaymentRequest->authorizationPlainTags_len =  sizeof(authorizationPlainTags)/sizeof(uint16_t);
     
@@ -217,12 +184,9 @@ error_t preparePaymentRequest(UCubePaymentRequest_t * UCubePaymentRequest) {
     
     CURRENCY_EUR.currency_exp = 2;
 
-
-
     preferredLanguageList[0].language[0] = 'e';
     
     preferredLanguageList[0].language[1] = 'n';
-    
 
     UCubePaymentRequest->amount =1;
     
@@ -239,7 +203,6 @@ error_t preparePaymentRequest(UCubePaymentRequest_t * UCubePaymentRequest) {
     UCubePaymentRequest->applicationSelectionTask = applicationSelectionTask;
     
     UCubePaymentRequest->preferredLanguageList = preferredLanguageList;
-    
 
     UCubePaymentRequest->onProgress = onProgress ;
     
@@ -277,56 +240,41 @@ error_t preparePaymentRequest(UCubePaymentRequest_t * UCubePaymentRequest) {
     
     UCubePaymentRequest->onlinePinBlockFormat = PIN_BLOCK_ISO9564_FORMAT_0;
     
-
     UCube_api_pay(UCubePaymentRequest);
     
     return err;
-
 }
 
 ```
-- During the payment the  OnProgress() callback is called. The payment Context and State can be checked:
-- Example:
+
+During the payment the  OnProgress() callback is called. The payment Context and State can be checked:
+
 ```c
-
-
-
-
-
 void onProgress(UCubePaymentContext_t* context,PaymentState* state){
 
-
-    PRINTF("********Payment State: %s \r\n",
-            getStateName(*state));
+    PRINTF("********Payment State: %s \r\n", getStateName(*state));
     //TODO Put here your code
     
 }
 ```
-- At the end of payment the Payment Context is returned and the callback onFinish is called:
+
+At the end of payment the Payment Context is returned and the callback onFinish is called:
+
 ```c
-
-
-
-
-
-void onFinish(UCubePaymentContext_t* context)
-{
+void onFinish(UCubePaymentContext_t* context){
    
-    PRINTF("********Payment Status: %s \r\n",
-            getStatusName(context->paymentStatus));
-   //TODO Put here your code
-   
+    PRINTF("********Payment Status: %s \r\n", getStatusName(context->paymentStatus));
+    //TODO Put here your code
+  
 }
 ```
 - You can use the example provided in the customer_app (payment.c)
 
-
 #### PaymentContext
-- The PaymentContext is the object that evoluates for each step of the payment and is returned at the end.
+
+The PaymentContext is the object that evoluates for each step of the payment and is returned at the end.
+
 ```c
-
-
-
 
 //  payment context
 typedef struct
@@ -343,7 +291,6 @@ typedef struct
      * */
     int amount;
     
-    
     /*
      * Indicates the currency of the transaction
      * The Currency class has 3 attributes :
@@ -352,7 +299,6 @@ typedef struct
      *  int exponent;
      * */
     Currency currency;
-    
     
     /*
      * Indicates the type of financial transaction, represented by the first two digits of the
@@ -368,12 +314,10 @@ typedef struct
      * */
     TransactionType transactionType;
     
-    
     /*
      * Local date & time that the transaction was authorised
      * */
     Date transactionDate;
-    
     
     /*
      * Timeout for "waiting for any interfaces"
@@ -381,13 +325,11 @@ typedef struct
      * */
     int cardWaitTimeout;
     
-    
     /*
      * 1 to 6 languages stored in order of preference, each represented by 2 alphabetical
      * characters according to ISO 639
      * */
     uint8_t * preferredLanguageList;
-    
     
     /*
      * only for the contactless transaction, if true, force the execution of this step
@@ -395,13 +337,11 @@ typedef struct
      * */
     int forceOnlinePIN;
     
-    
     /*
      * For contactless, it enable the force online at the start nfc transaction
      * for the contact, it enable the Merchant force online : byte 4 bit 4 of the TVR
      * */
     int forceAuthorization;
-    
     
     /*
      * Requested PIN block format:
@@ -413,19 +353,16 @@ typedef struct
      * */
     int onlinePinBlockFormat;
     
-    
     /*
      * The different interfaces to be activated
      * */
     CardReaderType * readerList;
-    
     
     /*
      * if true, the SDK will retrieve the 0xF4 and 0xCC tags at the end of the transaction
      * the 0xF4 and 0xCC tags contain part of SVPP Level 2 logs
      * */
     uint8_t forceDebug;
-    
     
     /*
      * if true, the SDK will retrieve the 0xF4 and 0xCC tags at the end of the transaction
@@ -434,21 +371,17 @@ typedef struct
      * */
     uint8_t getSystemFailureInfoL2;
     
-    
     /*
      * the list of tags need to be retrieved before calling the authorisationTask
      * */
     uint16_t * authorizationPlainTags;
     uint16_t * authorizationSecuredTags;
     
-    
     /*
      * the list of tags need to be retrieved before ending the transaction
      * */
     uint16_t * finalizationPlainTags;
     uint16_t * finalizationSecuredTags;
-    
-    
 
     /*icc input */
     /*
@@ -457,10 +390,8 @@ typedef struct
      * */
     uint8_t skipCardRemoval;
     
-    
 
     /* output common */
-    
     
     PaymentStatus paymentStatus;// The payment status see below possible values  
     
@@ -492,7 +423,6 @@ typedef struct
      * */
     uint16_t * authorizationResponse;
     
-    
     /***************************************** output *******************************************/
     
     /* output icc */
@@ -512,25 +442,21 @@ typedef struct
      * */
     EMVApplicationDescriptor selectedApplication;
     
-    
     /*
      * The terminal verification result
      * */
     uint8_t tvr[5];
-    
     
     /*
      * The whole response of the TransactionFinalisation command with header and footer
      * */
     uint8_t transactionFinalisationData[2];
     
-    
     /*
      * The whole response of the TransactionInitialization command with header and footer
      * */
     uint8_t transactionInitData[2];
     uint8_t transactionProcessData[2];
-    
     
     /* output nfc */
     /*
@@ -553,7 +479,6 @@ typedef struct
      * */
     uint8_t nfcOutcome[2];
     
-    
     /*
      * When the byte 0 of the outcome equals to 0x31,
      * this flag will be enabled and the application nned to
@@ -561,29 +486,27 @@ typedef struct
      * */
     uint8_t signatureRequired;
     
-    
     /* output for debug */
     uint8_t tagCC;  // svpp logs level 2 Tag CC
     
     uint8_t tagF4;  // svpp logs level 2 Tag F4
     
     uint8_t tagF5;  // svpp logs level 2 Tag F5
-    
 
 }UCubePaymentContext_t;
+
 ```
 #### PaymentState
-- You will receive the onProgress() callback for each new state. This is the whole liste of payement states :
+
+You will receive the onProgress() callback for each new state. 
+
+This is the whole liste of payement states :
+
 ```c
-
-
-
-
 typedef enum{
-
 	/* COMMON STATES*/
-	//start
 	
+	//start
 	ENTER_SECURE_SESSION,
 	
 	KSN_AVAILABLE,
@@ -609,7 +532,6 @@ typedef enum{
 	
 	END_EXIT_SECURE_SESSION,
 	
-
 	/* SMC STATES*/
 	START_ICC,
 	
@@ -633,7 +555,6 @@ typedef enum{
 	
 	SMC_REMOVE_CARD,
 	
-
 	/* NFC STATES*/
 	START_NFC,
 	
@@ -645,76 +566,52 @@ typedef enum{
 	
 	NFC_COMPLETE_TRANSACTION,
 	
-	
 }PaymentState;
+
 ```
 #### EMV Payment state machine
-<p><img src="../../images/payment_state_machine.png" alt="image" class="inline"/></p>
 
-- The EMV payment state machine is sequence of executing commands and tasks. Bellow you will see the different tasks used at transaction
+![payment_state_machine](https://user-images.githubusercontent.com/59020462/159264897-8a768f0e-e96c-4602-a06a-50bd49ccaea9.png)
+
+The EMV payment state machine is sequence of executing commands and tasks. Bellow you will see the different tasks used at transaction
 
 #### Tasks
-- Durring the payment process the payment state machine will be interrupted to execute some tasks that you implement.
+Durring the payment process the payment state machine will be interrupted to execute some tasks that you implement.
 
 #### ApplicationSelectionTask
+
 ```c
-
-
-
-
-
 void applicationSelectionTask(EMVApplicationDescriptor *
 		appList, uint8_t *size)
 {
-
-
 	   // TODO execute your application select algorithm here
-	   
-
 }
 ```
+
 #### RiskManagementTask
+
 ```c
-
-
-
-
 uint8_t riskManagementTask(void){
-
-
 
 	//TODO call your application risk management process
 	
-	
 	//return response
-	
-
 }
 ```
 #### AuthorizationTask
+
 ```c
-
-
-
-
-
 uint8_t authorizationTask (void){
-
 
 	//TODO call you backend here
 	
-   // at the end return the response
-   
- 
+       // at the end return the response
 }
 ```
+
 #### PaymentStatus
+
 ```c
-
-
-
-
-
 typedef enum{
     APPROVED, // Transaction has been approved by terminal
     
@@ -742,7 +639,6 @@ typedef enum{
     NFC_OUTCOME_END_APPLICATION, // Transaction has been failed: Error returned by terminal, at contactless transaction
     
     NFC_OUTCOME_FAILED, // Transaction has been failed: Error returned by terminal, at contactless transaction
-        
 
     ERROR, // Transaction has been failed : when one of the tasks or commands has been fail
     
@@ -757,29 +653,29 @@ typedef enum{
     ERROR_WRONG_CRYPTOGRAM_VALUE, // Transaction has been failed : when in the response of the transaction process command the tag 9F27 is missing
     
     ERROR_WRONG_NFC_OUTCOME, // Transaction has been failed : when terminal returns wrong values in the nfc outcome byte array
-    
-    
+
 }PaymentStatus;
+
 ```
 #### 4.2 Connectivity
 
 #### Connect to cellular network
 
-- Create a network_handler_t variable:
+Create a network_handler_t variable:
+
 ```c
 network_handler_t  network_handler_ct;
 ```
-- Initialize the network APN and set the prefered_network in the network handler to the cellular network.
-- Call the UCube_api_connect.
-```c
 
+Initialize the network APN and set the prefered_network in the network handler to the cellular network. Then, call the UCube_api_connect.
+
+```c
 #define QL_DEF_APN_CT  "orange" 
 
 error_t init_network(network_handler_t * network_handler) {
 
     error_t err = ERRORNO;
     
-
     strlcpy(network_handler->cellular_conf.apn, QL_DEF_APN_CT, QAPI_DSS_CALL_INFO_APN_MAX_LEN);
     
     network_handler->prefered_network = PREFERED_NETWORK_CELLULAR;
@@ -792,18 +688,21 @@ error_t init_network(network_handler_t * network_handler) {
 ```
 #### Send HTTP request
 
-- Create a socket_handler_t variable :
-```c
-socket_handler_t socket_handler_ct;
-```
-- Define the request url and type (GET/POST) as below:
-```c
-#define HTTP_REQUEST_URL        "https://webhook.site/5680215f-0091-45ab-b7b6-e2a9651df81e"
-```
-- Initialize the HTTP request using in your socket_handler_t variable.
-- Call the UCube_api_send_http_request with a pointer to your socket_handler. 
-```c
+Create a socket_handler_t variable :
 
+```c
+    socket_handler_t socket_handler_ct;
+```
+
+Define the request url and type (GET/POST) as below:
+
+```c
+    #define HTTP_REQUEST_URL  "https://webhook.site/5680215f-0091-45ab-b7b6-e2a9651df81e"
+```
+
+Initialize the HTTP request using in your socket_handler_t variable.Then, call the UCube_api_send_http_request with a pointer to your socket_handler. 
+
+```c
 error_t init_http_request(socket_handler_t * socket_handler) {
 
     error_t err = ERRORNO;
@@ -820,33 +719,26 @@ error_t init_http_request(socket_handler_t * socket_handler) {
     
     socket_handler->requestResult_cb = requestResult_ct_cb;
     
-
     UCube_api_send_http_request(socket_handler);
 
     return err;
-
 }
 ```
-- The request callback requestResult_ct_cb defined in init_http_request() is called at the end of http request.
+
+The request callback requestResult_ct_cb defined in init_http_request() is called at the end of http request.
 Example is provided below: it displays the response code received from the server.
+
 ```c
-
 void requestResult_ct_cb (https_request_handler_t request_handler){
-
 
     PRINTF("**Request result %d\r\n", request_handler.resp_Code);
     // TODO Put your code here
 }
-
-
 ```
 
 #### 5. RPC Commands
+
 ```c
-
-
-
-
 /************************************ System & Drivers ************************************/
 
 /* (RPC ID : 5001)
@@ -854,21 +746,15 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */
     svpp_com_ident_getinfo_t ident_getinfo;
 
-
-
 /* (RPC ID : 5003)
  * The command set device information. Note, this command can be called once the device is in the field.  
  * */
     svpp_com_ident_setinfofield_t ident_setinfofield;
- 
-
 
 /* (RPC ID : 5002)
  * The command sets several device information. Note, this command cannot be called once the device is in the field. 
  * */
     svpp_com_ident_setinfoprod_t ident_setinfoprod;
-
-
 
 /* RPC ID : 5020
  * This function waits for card insertion on a set of slots, in parallel. 
@@ -877,35 +763,25 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */   
     svpp_com_card_drv_cardwaitinsertion_t card_drv_cardwaitinsertion;
 
-
-
 /* (RPC ID : 5021)
  * This command sends a power off to a smart card previously inserted. 
  * */
     svpp_com_card_drv_cardwaitremoval_t card_drv_cardwaitremoval;
-
-
 
 /* (RPC ID : 5023)
  * This command sends a power off to a smart card previously inserted. 
  * */   
     svpp_com_card_drv_cardpoweroff_t card_drv_cardpoweroff;
 
-
-
 /* (RPC ID : 5022) 
  * This command sends an APDU to a smart card previously inserted and powered, respectfully to [EMV-1]. 
    * */
     svpp_com_card_drv_cardsendapdu_t card_drv_cardsendapdu;
 
-
-
 /* (RPC ID : 5024)   
  *This function returns the magnetic stripe data. See Magstripe Payment Workflow section 7.1.  
  * */    
     svpp_com_card_drv_magstriperead_t card_drv_magstriperead;
-
-
 
 /* (RPC ID : 5040)
  * This command is used to display a message on the screen without user Key Input. 
@@ -917,8 +793,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * in order to erase remaining previous text.  
  * */
     svpp_com_hmi_drv_displaymessagewithoutki_t hmi_drv_displaymessagewithoutki;
- 
-
 
 /* (RPC ID : 5043)
  *  This command is used to display a message on the terminal screen, and getting back the  
@@ -933,8 +807,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  *  remaining previous   text.Section 6.1.12     
  * */    
     svpp_com_hmi_drv_displaymessagewithki_t hmi_drv_displaymessagewithki;
-
-
 
 /*  (RPC ID : 5045)
  *  This command is an evolution of HMI_DRV.DisplayMessageWithKI (5043) in order to fulfil a Manual PAN entry  
@@ -953,8 +825,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */
     svpp_com_hmi_drv_displaymessagewithkicustom_t hmi_drv_displaymessagewithkicustom;  
 
-
-
 /* (RPC ID : 5042)
  * This command is used to display a list box. The keys ABORT and OK are evaluated during this command. 
  * The list is build up in the order the text strings are given. 
@@ -962,28 +832,20 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */
     svpp_com_hmi_drv_displaylistboxwithoutki_t hmi_drv_displaylistboxwithoutki;
 
-
-
 /* (RPC ID : 0302)
  * This command is used to set time in dongle. Time is composed of day, month, year, hour, minute, second
  * */
     svpp_com_term_rtcset_t term_rtcset;
  
-
-
 /* (RPC ID : 0301)
  * This command is used to set time in dongle. Time is composed of day, month, year, hour, minute, second 
  * */   
     svpp_com_term_rtcget_t term_rtcget;
  
-
-   
 /* (RPC ID : 0202)
  * This command is used to cancel all asynchronous process.
  * */
     svpp_com_term_cancelall_t term_cancelall;
-
-
 
 
 /************************************ Security Kernel ************************************/
@@ -1000,14 +862,10 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */  
     svpp_com_state_machine_entersecuredsession_t  state_machine_entersecuredsession;
 
-
-
 /* (RPC ID : 5110)
  * This command is used to receive information about stored keys on the terminal   
  * */  
     svpp_com_keymngt_getkeyinfo_t keymngt_getkeyinfo;
-
-
 
 /* (RPC ID : 5120)
  * This command is used to export an RSA public key to the LCI tool, in order to generate a certification  
@@ -1015,8 +873,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * The certificate is injected with the KEYMNGT.ImportPublicKeyCert.   
  * */    
     svpp_com_keymngt_exportpublickey_t keymngt_exportpublickey;
- 
-
 
 /* (RPC ID : 5121)
  * This command is used by the LCI tool to import an RSA public key certificate. The certificate is verified by  
@@ -1028,8 +884,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */   
     svpp_com_keymngt_importpublickeycert_t keymngt_importpublickeycert;
   
-
-
 /* (RPC ID : 5122)
  * This command is used in PERSO state to import K_CA_PSP_SUB. The certificate is verified by the terminal according to the  
  * K_CA_PSP.
@@ -1037,8 +891,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * certificate is impossible (except when reloading the full terminal software)  
  * */       
     svpp_com_keymngt_importpublickeypersocert_t keymngt_importpublickeypersocert;
- 
-
 
 /* (RPC ID : 5130)
  * This command is used to export all the necessary information to the RKI server 
@@ -1046,8 +898,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */
     svpp_com_keymngt_installforloadkey_t keymngt_installforloadkey;
  
-
-
 /* (RPC ID : 5131)
  * This command is used to inject DUKPT initial key. The key to load is nested in an [ANSI TR-31]key exchange block protected with  
  * a key block protection key. The key block protection key is transmitted encrypted with the terminal K_KEK_PUB key and signed by  
@@ -1055,20 +905,16 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */
     svpp_com_keymngt_loadkey_t keymngt_loadkey;
  
-
-
 /*  (RPC ID : 5160)
  * This command initializes a download sequence. Section 6.2.9
  * */
     svpp_com_download_installforload_t download_installforload;
-    
-
+   
 /* (RPC ID : 5161)
  * This command sends the Data File to load. This command is sent in several Blocks. 
  * Once the last block is received by the SVPP, the code installed once the signature has been verified.
  * */
     svpp_com_download_load_t download_load;
- 
     
 /* (RPC ID : 5170)
  * This command processes an online PIN entry and return back the encrypted PIN block using the DUKPT PIN session key  
@@ -1078,16 +924,14 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * again  within the same transaction.    
  * */   
     svpp_com_pin_onlinepin_t pin_onlinepin;
-
-
     
 /* (RPC ID : 5171)
  * This command processes an online PIN entry and return back the encrypted PIN block using the DUKPT PIN session key.
  * */
     svpp_com_pin_simplifiedonlinepin_t pin_simplifiedonlinepin;
   
- 
 /************************************ Payment kernel ************************************/
+
 
 /* (RPC ID : 5501)
  * Before executing any transaction, a set of banking parameters must be initialized. 
@@ -1099,13 +943,10 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */
     svpp_com_pay_bankparametersdownload_t pay_bankparametersdownload;
     
-    
 /* (RPC ID : 5503)
  * This command retrieve previously set bank parameters. 
  * */
     svpp_com_pay_bankparametersget_t pay_bankparametersget;
-    
-
 
 /* (RPC ID : 5510)
  * The execution of this command presumes that a card is already inserted in the device, and powered on.
@@ -1121,8 +962,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * the transaction sequence.
  * */
     svpp_com_pay_buildcandidatelist_t pay_buildcandidatelist;
-    
-    
 
 /* (RPC ID : 5511)
  * The execution of this command presumes that a card is already inserted in the device, and powered on, and the
@@ -1140,10 +979,7 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * risk management is known, the calling application sends the TransactionProcess to continue 
  * the transaction sequence.
  * */    
-    svpp_com_pay_transactioninitialization_t pay_transactioninitialization;
-    
-
-
+    svpp_com_pay_transactioninitialization_t pay_transactioninitialization;  
     
  /* (RPC ID : 5512)
  * The execution of this command presumes that a card is already inserted in the device,
@@ -1161,9 +997,6 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * */   
     svpp_com_pay_transactionprocess_t pay_transactionprocess;
     
-
- 
-    
  /* (RPC ID : 5513)
  * The execution of this command presumes that a card is already inserted in the device, and powered on,
  * and the TransactionProcess has previously been called.
@@ -1179,9 +1012,7 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * can later refuse it (for instance if the cardholder receipt printing failed).
  * */   
     svpp_com_pay_transactionfinalisation_t pay_transactionfinalisation;
- 
-    
-    
+     
 /* (RPC ID : 5025)
  * This function returns the value of one given tag. 
  * The tag can be an EMV tag or a proprietary tag. 
@@ -1189,23 +1020,17 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
  * SRED tags: 56 – 57 - 5A – 5F20 – 5F24 – 5F30 – 9F0B – 9F6B
  * */
     svpp_com_pay_getsecuredtagvalue_t pay_getsecuredtagvalue;
- 
- 
     
 /* (RPC ID : 5026)
  * This function returns the value of one given tag. 
  * The tag can be an EMV tag or a proprietary tag. 
  * */
     svpp_com_pay_getplaintagvalue_t pay_getplaintagvalue;
-
-
     
 /* (RPC ID : 5530)
  * This function starts a NFC Transaction.
  * */
-    svpp_com_pay_nfcstarttransaction_t pay_nfcstarttransaction;
- 
- 
+    svpp_com_pay_nfcstarttransaction_t pay_nfcstarttransaction; 
  
 /* (RPC ID : 5531)
  * This function completes a NFC Transaction (if necessary)
@@ -1213,14 +1038,12 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
     svpp_com_pay_nfccompletetransaction_t pay_nfccompletetransaction;
 ```
 
-- For each RPC there is a corresponding parameter defined in svpp_com_gen_data.h.
-- Initialize the parameter's fields with the required values.
-- The example below shows how to initialize and send a get info RPC. The required parameter fields are: tag
-- The tag is initialized with the value of svpp version wich is : 0xD1 defined in SVPP_COM_TAG_INFO_SVPP_VERSION
-- The response received in the parameter field service_ctx.rpc_ctx.param
+For each RPC there is a corresponding parameter defined in svpp_com_gen_data.h. Initialize the parameter's fields with the required values.
+The example below shows how to initialize and send a get info RPC. The required parameter fields is tag.
+The tag is initialized with the value of svpp version wich is : 0xD1 defined in SVPP_COM_TAG_INFO_SVPP_VERSION.
+The response received in the parameter field service_ctx.rpc_ctx.param.
+
 ```c
-
-
 
 void init_rpc(void)
 {
@@ -1240,15 +1063,12 @@ void init_rpc(void)
     
     param_ct = *payment_ctx.rpc_ctx.param;
     
-    if(err == ERRORNO )
+    if(err == ERRORNO ) {
     
-    {
-        if((memcmp(param_ct.ident_getinfo.rx_msg.pData,&tag,sizeof(tag)))==0)
-        
-        {
-            if(param_ct.ident_getinfo.rx_msg.pData[1] == sizeof(svpp_version))
-                    
-            {
+        if((memcmp(param_ct.ident_getinfo.rx_msg.pData,&tag,sizeof(tag)))==0) {
+	
+            if(param_ct.ident_getinfo.rx_msg.pData[1] == sizeof(svpp_version)) {
+	    
                 memcpy(svpp_version, &param_ct.ident_getinfo.rx_msg.pData[2],  sizeof(svpp_version));
                         
                 PRINTF("********** SVPP VERSION :");
@@ -1256,21 +1076,16 @@ void init_rpc(void)
                 PRINTF_HEX_BUFFER(svpp_version,4);
                 
                 PRINTF("\r\n :");
-                
             }
-            
         }
-        
     }
-    
 }
-
-
    
 ```
+
 All this commands are described in the terminal documentation.
 
-If the device is in secured state, the input / output data may be protected by a specific security level. The terminal documentation describe how input data and output data are protected for every command in each different security state.   
+If the device is in secured state, the input / output data may be protected by a specific security level. The terminal documentation describes how input data and output data are protected for every command in each different security state.   
  
 Note : In the secure session there is a sequence number managed by the SDK and incremented at every RPC call, If you need to know what is the current sequence number you cann get it using getCurrentSequenceNumber API.
 - In the case of output, the SDK create e RPCMessage to store response.
@@ -1283,18 +1098,13 @@ Note that no MAC if the data is null.
 
 # III. Task Creation
 ### Introduction:
-- To create a task use the os_itf interface.
-- Follow the sample code provided in customer_app.
+To create a task use the os_itf interface. Follow the sample code provided in customer_app.
 
 ### Task Creation
 
-- Create and init task function to be called from appmodem.c:  
-- Create a queue and assign it to the your task.
-- The task priority, stack size, name, and routine need to be passed to os_itf_task_create() function.
+Create and init task function to be called from appmodem.c. Create a queue and assign it to the your task. The task priority, stack size, name, and routine need to be passed to os_itf_task_create() function.
+
 ```c
-
-
-
 /**
  * @brief    intialize customer app
  * create customer task and queue
@@ -1303,17 +1113,15 @@ Note that no MAC if the data is null.
 error_t customer_app_init(void)
 {
     error_t err = EFAIL;
-
-
+    
     /* create queue for customer task*/
     err = os_itf_queue_create(&customer_app_ctx.queue,
                                 QUEUE_CUSTOMER_APP_NAME,
                                 OS_ITF_MAX_QUEUE_MSG_SIZE,
                                 CUSTOMER_APP_MAX_MESSAGE_IN_QUEUE);
 
-
-    if (err == ERRORNO)
-    {
+    if (err == ERRORNO){
+    
         customer_app_ctx.task.stacksize = TASK_CUSTOMER_APP_STACK;
         customer_app_ctx.task.priority = TASK_CUSTOMER_APP_PRIORITY;
         customer_app_ctx.task.function = customer_app_routine;
@@ -1323,29 +1131,27 @@ error_t customer_app_init(void)
         /* create  customer task*/
         err = os_itf_task_create(&customer_app_ctx.task);
 
-        if (err != ERRORNO)
-        {
+        if (err != ERRORNO){
             PRINTF_VERBOSE("ERROR: customer_app_init, os_itf_task_create %d", err);
         }
     }
     
-    else
-    {
+    else{
         PRINTF_VERBOSE("ERROR: customer_app_init, os_itf_queue_create %d", err);
     }
 
-
     return err;
-    
+   
 }
 ```
 
 ### Task Routine
-- Create the task routine and enter at as input to the function os_itf_task_create() as shown above.
+
+Create the task routine and enter at as input to the function os_itf_task_create() as shown above.
+
 Example:
+
 ```c
-
-
 /**
  * @brief    main of customer app
  * @return  NULL
@@ -1355,8 +1161,7 @@ TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
 
     error_t err = ERRORNO;
     
-    for(;;)
-    {
+    for(;;){
     
       //TODO
        Put your code here
@@ -1369,12 +1174,11 @@ TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
 
 ### Queue 
 ### send message to queue
-- To send a message to queue create the message with type "OS_ITF_QUEUE_API_ARG" and use the function os_itf_queue_send to send it.  
-- Example for sending a message to customer task:
-```c    
-      
-        
-          
+To send a message to queue create the message with type "OS_ITF_QUEUE_API_ARG" and use the function os_itf_queue_send to send it.  
+
+Example for sending a message to customer task:
+
+```c          
             
  os_itf_queue_msg_t msg_from_main_to_customer_task;
  
@@ -1387,19 +1191,15 @@ TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
  msg_from_main_to_customer_task.payload.pData = &startApp;
  
  os_itf_queue_send(&customer_app_ctx.queue, msg_to_queue); 
- 
                    
 ```
 ### receive message in queue
 
-- To receive a message in queue, use the function  os_itf_queue_rcv() and indicate in parameter the queue and a pointer to the message to receive.
+To receive a message in queue, use the function  os_itf_queue_rcv() and indicate in parameter the queue and a pointer to the message to receive.
 
-- Example from customer task:
+Example from customer task:
+
 ```c
-
-
-
-
 
 /**
  * @brief    main of customer app
@@ -1411,10 +1211,8 @@ TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
     OS_ITF_QUEUE_API_ARG msg_from_queue;
     
     int status = -1;
-
-
-    for(;;)
-    {
+    
+    for(;;){
     
         /*receive message in queue */
         status = os_itf_queue_rcv(&customer_app_ctx.queue, &msg_from_queue);
@@ -1428,3 +1226,6 @@ TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
 }
 
 ```
+
+
+![Cptr_logoYT](https://user-images.githubusercontent.com/59020462/71242500-663cdb00-230e-11ea-9a07-3ee5240c6a68.jpeg)
