@@ -4,25 +4,32 @@
 
 
 
-This repository provides a step by step documentation for YouTransactor's miniPOS SDK, that enables you to integrate our proprietary card terminal(s) to accept credit and debit card payments (incl. VISA, MasterCard, American Express and more). The relation between the MODEM and the secure Processor(SVPP) is a Master-Slave relation, so the MODEM  drives the SVPP  by calling diffrent available commands via SPI interface.  
-The main function of the SDK is to send RPC commands to the SVPP  in order to drive it. The SDK provides also a payment, update and log APIs.  
+This repository provides a step by step documentation for YouTransactor's miniPOS SDK, that enables you to integrate our proprietary card terminal(s) to accept credit and debit card payments (incl. VISA, MasterCard, American Express and more).
 
-The SDK contains several modules:  [RPC](unionsvpp__com__transaction__param__u.html#aafeab31fffc9333316ce63d1f10d898a.html), [Payment](payment_8c.html), MDM, Network, Log.  
+The miniPOS is a standolone POS solution which has the connectivity capability via WI-FI and 4G/2G. The Payment application runs on the terminal it self. The device integrates 3 processors : Modem processor, Secure processor (SVPP) and WI-FI processor. The modem processor is the applicatif processor and the mobile connectivity provider. The Secure processor manages the communication with the card and the secure operations. The WI-FI processor provides the WI-FI connectivity. 
 
-- The RPC module use an SPI interface to send/receive, RPC command/response from secure processor. It provides an implementation of all RPC Commands you will see next how to use that in your application.
-- The MDM module is an implementation of all YouTransactor's TMS services. The TMS server is mainly used to manage the version of firmware and ICC / NFC configurations of card terminal.  
-So the SDK allows you to transparently update of the card terminal using our TMS. This module is useless if you decide to use another TMS not the YouTransactor one.
-- The payment module implements the transaction processing for contact and contactless. For every payment, a [UCubePaymentRequest](struct_u_cube_payment_request__t.html) instance should be provided as input to configure the current payment and durring the transaction a callback is returned for every step. At the end of transaction a [PaymentContext](struct_u_cube_payment_context__t.html)  instance is returned which contains all necessary data to save the transaction.  
- An example of Payment call is provided next.
-- The SDK provide an ILogger interface and a default implementation to manage logs.  
- Your application has the choice between using the default implementation which print the logs in a file that can be sent to our TMS server or you can use your own implementation of ILogger.  
+We give our clients the possibility to develop their payment applicationon the modem, however we provide binaries of the two firmwares WI-FI and secure processor (SVPP). Since the relation between Modem and the two others processor is a Master-Slave relation. So, The MODEM drives this two processors. 
+The main function of the SDK is to send RPC commands to the SVPP and the WI-FI in order to drive them. The SDK provides also a payment, update and log APIs.  
 
-All this functions are resumed in one Class which is  [UCubeAPI](ucube__api_8h.html). This class provides public static methods that your application can use to setup ConnexionManager, setup Logger, do a payment, do an update using Our TMS...  
+The SDK contains several modules:  RPC, Payment, MDM, Network.  
+
+The RPC module use an SPI interface to send/receive, RPC command/response from secure processor. It provides an implementation of all RPC Commands you will see next how to use that in your application.
+
+The Network module implement the data exchnage usin mobile data and the WI-FI. The application can use it to call webservices. An example is provided next.
+
+The MDM module is an implementation of all YouTransactor's TMS services. The TMS server is mainly used to manage the version of firmware and ICC / NFC configurations of card terminal. So the SDK allows you to transparently update of the terminal using our TMS. This module is useless if you decide to use another TMS not the YouTransactor one.
+
+The payment module implements the EMV transaction processing for contact and contactless. The SDK takes in input a UCubePaymentRequest structure. Is is used to configure the current payment and durring the transaction a callback is returned for every step. At the end of transaction a PaymentContext  structure is returned which contains all necessary data to save the transaction.  
+An example of Payment call is provided next.
+
+All this functions are resumed in one Class which is UCubeAPI.
+
 The SDK do not save any transaction or update data.
 
-For more information about [YouTransactor](https://www.youtransactor.com/) developer products, please refer to our website. Visit [youtransactor.com](https://www.youtransactor.com/)!
+For more information about [YouTransactor](https://www.youtransactor.com/) products, please refer to our website. Visit [youtransactor.com](https://www.youtransactor.com/)!
 
-# I. General overview
+## I. General overview
+
 ### Introduction:
 YouTransactor miniPOS card terminals is a uCube Touch terminal. It is a lightweight and compact payment dongle. 
 
@@ -39,27 +46,26 @@ The management system can be administered by YouTransactor and offers the follow
 - Other services
 
 The MDM module of SDK implements all our management system services and the UCubeAPI provides methods to call this implementation.
+
 ### 2. Terminal management
+
 #### 2.1 Initial configuration
-To be functional, in the scope of PCI PTS requirement, and SRED key shall be loaded securely in the device. This key is loaded locally by YouTransactor tools.  
- The initial SALT is injected in the same way.
+To be functional, in the scope of PCI PTS requirement, and SRED key shall be loaded securely in the device. This key is loaded locally by YouTransactor tools. The initial SALT is injected in the same way.
 
 #### 2.2 Switching On/Off
 The uCube lights up by pressing the "ON / OFF" button for three seconds. Once the device is on, the user can initiate the payment process.  
- The uCube switches off either by pressing the "ON / OFF" button or after X* minutes of inactivity (* X = OFF timeout).
+The uCube switches off either by pressing the "ON / OFF" button or after X* minutes of inactivity (* X = OFF timeout).
 
 #### 2.3 Update
-During the life of the terminal, the firmware could be updated (to get bug fix, evolutions..), the contact and contactless configuration also could be updated.  
-The Terminal's documentation describe how these updates can be done and which RPC to use to do that.
+During the life of the terminal, the firmware can be updated (to get bug fix, evolutions..), the contact and contactless configuration also can be updated. The Terminal's documentation describe how these updates can be done and which RPC to use to do that.
 
-#### 2.4 System logs
-The SDK prints logs in logcat at runtime. The log module use a default implementation that prints these logs in UART terminal.
+## II. Technical Overview
 
-# II. Technical Overview
 ### 1. General Architecture
+
 #### 1.1 Hardware Architecture                                       
 uCube Touch miniPOS integrates a Quectel modem (BG95-M3) and a St-microelectronics secure processor (STM32L4).  
- The modem is running the SDK software including the application demo “appmodem” while the secure processor is running the SVPP software that is controlling display, keyboard and has interface with EMV contact and contactless modules.  
+The modem is running the SDK software including the application demo “appmodem” while the secure processor is running the SVPP software that is controlling display, keyboard and has interface with EMV contact and contactless modules.  
   
 ![architecture](https://user-images.githubusercontent.com/59020462/159263753-7a32a338-6951-4152-bc61-9cb957dd0892.png)
  
@@ -734,7 +740,7 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
 }
 ```
 
-#### 5. RPC Commands
+### 5. RPC Commands
 
 ```c
 /************************************ System & Drivers ************************************/
@@ -1094,11 +1100,12 @@ Switch case of protection level, the parse of response will be different :
 - In the case of signed and ciphered, commandId, status, data, data_mac & data_ciphered contain values.
 Note that no MAC if the data is null.
 
-# III. Task Creation
-### Introduction:
+## III. Task Creation
+
+### 1.Introduction:
 To create a task use the os_itf interface. Follow the sample code provided in customer_app.
 
-### Task Creation
+### 2. Task Creation
 
 Create and init task function to be called from appmodem.c. Create a queue and assign it to the your task. The task priority, stack size, name, and routine need to be passed to os_itf_task_create() function.
 
@@ -1143,7 +1150,7 @@ error_t customer_app_init(void)
 }
 ```
 
-### Task Routine
+### 3.Task Routine
 
 Create the task routine and enter at as input to the function os_itf_task_create() as shown above.
 
@@ -1170,8 +1177,8 @@ TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
 }
 ```
 
-### Queue 
-### send message to queue
+### 4.Queue 
+#### 4.1 send message to queue
 To send a message to queue create the message with type "OS_ITF_QUEUE_API_ARG" and use the function os_itf_queue_send to send it.  
 
 Example for sending a message to customer task:
@@ -1191,7 +1198,7 @@ Example for sending a message to customer task:
  os_itf_queue_send(&customer_app_ctx.queue, msg_to_queue); 
                    
 ```
-### receive message in queue
+#### 4.2receive message in queue
 
 To receive a message in queue, use the function  os_itf_queue_rcv() and indicate in parameter the queue and a pointer to the message to receive.
 
