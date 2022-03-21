@@ -2,9 +2,7 @@
 
 ###### Release 1.0.0.0
 
-<p>
-  <img src="https://user-images.githubusercontent.com/59020462/86530448-09bf9880-beb9-11ea-98f2-5ccc64ed6d6e.png">
-</p>
+
 
 This repository provides a step by step documentation for YouTransactor's miniPOS SDK, that enables you to integrate our proprietary card terminal(s) to accept credit and debit card payments (incl. VISA, MasterCard, American Express and more). The relation between the MODEM and the secure Processor(SVPP) is a Master-Slave relation, so the MODEM  drives the SVPP  by calling diffrent available commands via SPI interface.  
 The main function of the SDK is to send RPC commands to the SVPP  in order to drive it. The SDK provides also a payment, update and log APIs.  
