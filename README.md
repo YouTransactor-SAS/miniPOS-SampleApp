@@ -6,9 +6,9 @@
 
 This repository provides a step by step documentation for YouTransactor's miniPOS SDK, that enables you to integrate our proprietary card terminal(s) to accept credit and debit card payments (incl. VISA, MasterCard, American Express and more).
 
-The miniPOS is a standolone POS solution which has the connectivity capability via WI-FI and 4G/2G. The Payment application runs on the terminal it self. The device integrates 3 processors : Modem processor, Secure processor (SVPP) and WI-FI processor. The modem processor is the applicatif processor and the mobile connectivity provider. The Secure processor manages the communication with the card and the secure operations. The WI-FI processor provides the WI-FI connectivity. 
+The miniPOS is a standalone POS solution which has the connectivity capability via WI-FI and 4G/2G. The Payment application runs on the terminal it self. The device integrates 3 processors : Modem processor, Secure processor (SVPP) and WI-FI processor. The modem processor is the applicatif processor and the mobile connectivity provider. The Secure processor manages the communication with the card and the secure operations. The WI-FI processor provides the WI-FI connectivity. 
 
-We give our clients the possibility to develop their payment applicationon the modem, however we provide binaries of the two firmwares WI-FI and secure processor (SVPP). Since the relation between Modem and the two others processor is a Master-Slave relation. So, The MODEM drives this two processors. 
+We give our clients the possibility to develop their payment applicationon the modem, however we provide binaries of the two firmwares WI-FI and secure processor (SVPP). Since the relation between Modem and the two others processor is a Master-Slave relationship,The MODEM drives these two processors. 
 The main function of the SDK is to send RPC commands to the SVPP and the WI-FI in order to drive them. The SDK provides also a payment, update and log APIs.  
 
 The SDK contains several modules:  RPC, Payment, MDM, Network.  
@@ -28,24 +28,21 @@ For more information about [YouTransactor](https://www.youtransactor.com/) produ
 ## I. General overview
 
 ### Introduction:
-YouTransactor miniPOS card terminals is a uCube Touch terminal. It is a lightweight and compact payment dongle. 
-
-## I. General overview 
-
-### 1. Introduction
 
 YouTransactor mPOS card terminals are : 
 * uCube Touch mPOS
 * uCube Touch miniPOS
 
-The uCube Touch exist in two versions, first one needs the smartphone to communication with the server, the secod one is a standalone version. Which has the connectevity and the payment application runs directly on the device.
+The uCube Touch exists in two versions, first one needs the smartphone to communication with the server, the second one is a standalone version, which has the connectivity and the payment application runs directly on the device.
 
-This github is specific to the miniPOS version. For more information about mPOS version please refers to these github repo
+This github is specific to the miniPOS version. For more information about mPOS version please refer to these github repo
 * [Android SDK](https://github.com/YouTransactor-SAS/mPOS-SDK-Android/)
 * [IOS SDK](https://github.com/YouTransactor-SAS/mPOS-SDK-IOS/)
 
+YouTransactor miniPOS card terminals is a uCube Touch terminal. It is a lightweight and compact payment dongle. 
 
-### 3. uCube Touch
+
+### 1. uCube Touch
 
 The uCube Touch is a lightweight and compact payment dongle. It is a point of sale, that accepts contactless and contact payment cards.
 
@@ -53,7 +50,7 @@ The uCube Touch is a lightweight and compact payment dongle. It is a point of sa
   <img width="250" height="250" src="https://user-images.githubusercontent.com/59020462/77367842-437df080-6d5b-11ea-8e3a-423c3bc6b96b.png">
 </p>
 
-### 1. The Management System
+### 2. The Management System
 
 The management system can be administered by YouTransactor and offers the following services:
 
@@ -67,17 +64,20 @@ The management system can be administered by YouTransactor and offers the follow
 
 The MDM module of SDK implements all our management system services and the UCubeAPI provides methods to call this implementation.
 
-### 2. Terminal management
+### 3. Terminal management
 
-#### 2.1 Initial configuration
+#### 3.1 Initial configuration
 To be functional, in the scope of PCI PTS requirement, and SRED key shall be loaded securely in the device. This key is loaded locally by YouTransactor tools. The initial SALT is injected in the same way.
 
-#### 2.2 Switching On/Off
+#### 3.2 Switching On/Off
 The uCube lights up by pressing the "ON / OFF" button for three seconds. Once the device is on, the user can initiate the payment process.  
 The uCube switches off either by pressing the "ON / OFF" button or after X* minutes of inactivity (* X = OFF timeout).
 
-#### 2.3 Update
+#### 3.3 Update
 During the life of the terminal, the firmware can be updated (to get bug fix, evolutions..), the contact and contactless configuration also can be updated. The Terminal's documentation describe how these updates can be done and which RPC to use to do that.
+
+#### 3.4 System logs
+The SDK prints logs in logcat at runtime. The log module use a default implementation that prints these logs in UART terminal.
 
 ## II. Technical Overview
 
@@ -1122,10 +1122,10 @@ Note that no MAC if the data is null.
 
 ## III. Task Creation
 
-### 1.Introduction:
+### Introduction:
 To create a task use the os_itf interface. Follow the sample code provided in customer_app.
 
-### 2. Task Creation
+### Task Creation
 
 Create and init task function to be called from appmodem.c. Create a queue and assign it to the your task. The task priority, stack size, name, and routine need to be passed to os_itf_task_create() function.
 
@@ -1170,7 +1170,7 @@ error_t customer_app_init(void)
 }
 ```
 
-### 3.Task Routine
+### Task Routine
 
 Create the task routine and enter at as input to the function os_itf_task_create() as shown above.
 
@@ -1197,8 +1197,8 @@ TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
 }
 ```
 
-### 4.Queue 
-#### 4.1 send message to queue
+### Queue 
+#### send message to queue
 To send a message to queue create the message with type "OS_ITF_QUEUE_API_ARG" and use the function os_itf_queue_send to send it.  
 
 Example for sending a message to customer task:
@@ -1218,7 +1218,7 @@ Example for sending a message to customer task:
  os_itf_queue_send(&customer_app_ctx.queue, msg_to_queue); 
                    
 ```
-#### 4.2receive message in queue
+#### receive message in queue
 
 To receive a message in queue, use the function  os_itf_queue_rcv() and indicate in parameter the queue and a pointer to the message to receive.
 
@@ -1251,6 +1251,3 @@ TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
 }
 
 ```
-
-
-![Cptr_logoYT](https://user-images.githubusercontent.com/59020462/71242500-663cdb00-230e-11ea-9a07-3ee5240c6a68.jpeg)
