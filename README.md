@@ -87,12 +87,12 @@ During the life of the terminal, the firmware can be updated (to get bug fix, ev
 uCube Touch miniPOS integrates a Quectel modem (BG95-M3) and a St-microelectronics secure processor (STM32L4).  
 The modem is running the SDK software including the application demo “appmodem” while the secure processor is running the SVPP software that is controlling display, keyboard and has interface with EMV contact and contactless modules.  
   
-![architecture](https://user-images.githubusercontent.com/59020462/159263753-7a32a338-6951-4152-bc61-9cb957dd0892.png)
+![architecture](https://user-images.githubusercontent.com/55090899/188469960-79d45167-f3ea-48c0-bcb4-9c20f2a21a36.png)
  
 #### 1.2 Application Architecture
 This diagrams describes the general software architecture. Only the uCubeAPI methods and the RPC commands are public and you can call them.  
 
-![sdk_architecture](https://user-images.githubusercontent.com/59020462/159264003-747c1615-9525-42f9-8b8f-acaef9d29e74.png) 
+![sdk_architecture](https://user-images.githubusercontent.com/55090899/188472350-01bdadc3-d42a-4b21-afc8-1494bf8134a3.png)
 
 The demo application we provide display a menu as a first screen, user will be able to select one of the options example 'Payment', so the application will call the UCube_api_pay with a uCubePaymentRequest intance as input.   
 This starts a transaction and enable the contact and the contactless readers. Depends on the activated reader one of the transaction flows will be called.  
