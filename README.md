@@ -1,10 +1,10 @@
-# YouTransactor uCube Touch miniPOS 
+# Jabil Payment Solutions uCube Touch miniPOS 
 
 ###### Release 1.0.0.9
 
 
 
-This repository provides a step by step documentation for YouTransactor's miniPOS SDK, that enables you to integrate our proprietary card terminal(s) to accept credit and debit card payments (incl. VISA, MasterCard, American Express and more).
+This repository provides a step by step documentation for JPS's miniPOS SDK, that enables you to integrate our proprietary card terminal(s) to accept credit and debit card payments (incl. VISA, MasterCard, American Express and more).
 
 The miniPOS is a standalone POS solution which has the connectivity capability via WI-FI and 4G/2G. The Payment application runs on the terminal it self. The device integrates 3 processors : Modem processor, Secure processor (SVPP) and WI-FI processor. The modem processor is the applicatif processor and the mobile connectivity provider. The Secure processor manages the communication with the card and the secure operations. The WI-FI processor provides the WI-FI connectivity. 
 
@@ -15,7 +15,7 @@ The SDK contains several modules:  RPC, Payment, MDM, Network.
 
 * The RPC module use an SPI interface to send/receive, RPC command/response from secure processor. It provides an implementation of all RPC Commands you will see next how to use that in your application.
 * The Network module implement the data exchnage usin mobile data and the WI-FI. The application can use it to call webservices. An example is provided next.
-* The MDM module is an implementation of all YouTransactor's TMS services. The TMS server is mainly used to manage the version of firmware and ICC / NFC configurations of card terminal. So the SDK allows you to transparently update of the terminal using our TMS. This module is useless if you decide to use another TMS not the YouTransactor one.
+* The MDM module is an implementation of all JPS's TMS services. The TMS server is mainly used to manage the version of firmware and ICC / NFC configurations of card terminal. So the SDK allows you to transparently update of the terminal using our TMS. This module is useless if you decide to use another TMS not the JPS one.
 * The payment module implements the EMV transaction processing for contact and contactless. The SDK takes in input a UCubePaymentRequest structure. Is is used to configure the current payment and durring the transaction a callback is returned for every step. At the end of transaction a PaymentContext  structure is returned which contains all necessary data to save the transaction.  
 An example of Payment call is provided next.
 
@@ -23,13 +23,13 @@ All this functions are resumed in one Class which is UCubeAPI.
 
 The SDK do not save any transaction or update data.
 
-For more information about [YouTransactor](https://www.youtransactor.com/) products, please refer to our website. Visit [youtransactor.com](https://www.youtransactor.com/)!
+For more information about [Jabil Payment Solutions](https://www.jabil.com/industries/payment-solutions/solutions.html) products, please refer to our website. Visit [Jabil Payment Solutions's website](https://www.jabil.com/industries/payment-solutions.html)!
 
 ## I. General overview
 
 ### Introduction:
 
-YouTransactor mPOS card terminals are : 
+JPS mPOS card terminals are : 
 * uCube Touch mPOS
 * uCube Touch miniPOS
 
@@ -52,7 +52,7 @@ The uCube Touch is a lightweight and compact payment dongle. It is a point of sa
 
 ### 2. The Management System
 
-The management system can be administered by YouTransactor and offers the following services:
+The management system can be administered by JPS and offers the following services:
 
 - Management of the uCube fleet
 
@@ -67,7 +67,7 @@ The MDM module of SDK implements all our management system services and the UCub
 ### 3. Terminal management
 
 #### 3.1 Initial configuration
-To be functional, in the scope of PCI PTS requirement, and SRED key shall be loaded securely in the device. This key is loaded locally by YouTransactor tools. The initial SALT is injected in the same way.
+To be functional, in the scope of PCI PTS requirement, and SRED key shall be loaded securely in the device. This key is loaded locally by JPS tools. The initial SALT is injected in the same way.
 
 #### 3.2 Switching On/Off
 The uCube lights up by pressing the "ON / OFF" button for three seconds. Once the device is on, the user can initiate the payment process.  
@@ -87,12 +87,12 @@ The SDK prints logs in logcat at runtime. The log module use a default implement
 uCube Touch miniPOS integrates a Quectel modem (BG95-M3) and a St-microelectronics secure processor (STM32L4).  
 The modem is running the SDK software including the application demo “appmodem” while the secure processor is running the SVPP software that is controlling display, keyboard and has interface with EMV contact and contactless modules.  
   
-![architecture](https://user-images.githubusercontent.com/59020462/159263753-7a32a338-6951-4152-bc61-9cb957dd0892.png)
+![architecture](https://user-images.githubusercontent.com/55090899/188469960-79d45167-f3ea-48c0-bcb4-9c20f2a21a36.png)
  
 #### 1.2 Application Architecture
 This diagrams describes the general software architecture. Only the uCubeAPI methods and the RPC commands are public and you can call them.  
 
-![sdk_architecture](https://user-images.githubusercontent.com/59020462/159264003-747c1615-9525-42f9-8b8f-acaef9d29e74.png) 
+![sdk_architecture](https://user-images.githubusercontent.com/55090899/188472350-01bdadc3-d42a-4b21-afc8-1494bf8134a3.png)
 
 The demo application we provide display a menu as a first screen, user will be able to select one of the options example 'Payment', so the application will call the UCube_api_pay with a uCubePaymentRequest intance as input.   
 This starts a transaction and enable the contact and the contactless readers. Depends on the activated reader one of the transaction flows will be called.  
@@ -821,7 +821,7 @@ void requestResult_ct_cb (https_request_handler_t request_handler){
 /* (RPC ID : 5043)
  *  This command is used to display a message on the terminal screen, and getting back the  
  *  plaintext numeric keys entered by the user. Only secured text messages can be displayed.  
- *  These messages are secured because they have been previously verified by YouTransactor  
+ *  These messages are secured because they have been previously verified by JPS  
  *  that sign them after verification (with the K_KTCC).  
  *  Prompt texts are built up in the following way, whereby %s indicates where the input is added and the ‘|’    
  *  starts the input format. The input format string is shown on the display at the place indicated by %s.   
