@@ -1,6 +1,6 @@
-# Jabil Payment Solutions uCube Touch miniPOS 
+# JPS SDK - ThreadX  
 
-###### Release 1.0.0.9
+###### Release 1.0.0.10
 
 
 
@@ -113,28 +113,178 @@ This sequence diagram below shows the interaction between different soft modules
 The APIs provided by UCubeAPI are:
 
 ```c
-// start a payment
- /*
-  * use this api when you need to start a transaction
-  * the SDK implement the contact and the contactless transaction flow
-  * @param UCubePaymentRequest_t : object with all needed data in input of the transaction
-  * and all callbacks that the SDK will call at a specific moment of the transaction.
-  * e.g. onProgress() callback, AuthorisationTask callback,...etc.
-  * The paymentContext object is created at the begin of transaction, his input variable are set 
-  * from the begin of the transaction, they can be updated during that and all output variable 
-  * are set during and at the end of the transaction. 
-  * */ 
+
+/**
+ * Retrieve SDK version number, which is hardcoded in SDK_version.h
+ *
+ * @return Version number as a string which follows this format : vX.X.X.X
+ */
+char *UCube_api_get_version(void);
+
+/////////////////////////////////////////// Cellular
+
+/*
+ * Returns current cellular status.:
+ * - enabled: Cellular interface is activated
+ * - disabled: Cellular interface is not activated
+ * - connected: Cellular interface is activated, cellular network is available.
+ * - disconnected: Cellular interface is activated, cellular network is not
+ * available.
+ *
+ * @return Cellular connection status.
+ * */
+cellular_status_t UCube_api_get_cellular_status(void);
+
+/*
+ * Register a callback in order to be notified when cellular status
+ * changes.
+ *
+ * @param onCellularStatusChange_cb: callback which is called each time the
+ * current status changes.
+ * */
+void UCube_api_register_cellular_status_change(void (*onCellularStatusChange_cb)(uint8_t));
+
+/*
+ * Connect to a cellular network. Prerequisite: SIM card must be inserted.
+ * At the end of the process the onFinish_cb callback will be called.
+ * The process will be limited to x seconds of timeout.
+ *
+ * @param timeout: Connection timeout in seconds
+ * @param onFinish_cb: Callback that indicates the end of process
+ * @param p_network_handler: All necessary information of the network
+ * @return 0 when success, otherwise != 0.
+ * */
+error_t  UCube_api_connect_cellular(uint32_t timeout, void (*onFinish_cb)(uint8_t), network_handler_t * p_network_handler);
+
+/*
+ * Disconnect from a cellular network.
+ * At the end of the process the onFinish_cb callback will be called.
+ * The process will be limited to x seconds of timeout.
+ *
+ * @param timeout: Connection timeout in seconds.
+ * @param onFinish_cb: Callback that indicates the end of process
+ * @param p_network_handler:  All necessary information of the network
+ * @return 0 if success, otherwise != 0.
+ * */
+error_t UCube_api_disconnect_cellular(uint32_t timeout, void (*onFinish_cb)(uint8_t), network_handler_t * network_handler);
+
+
+/////////////////////////////////////////// Wi-Fi
+
+/*
+ * Returns current Wi-Fi status:
+ * -enabled: Wi-Fi interface is activated
+ * -disabled: Wi-Fi interface is not activated
+ * -connected: Wi-Fi interface is activated and Wi-Fi is available
+ * -disconnected: Wi-Fi interface is activated and Wi-Fi is not available
+ *
+ * @return Wi-Fi connection status
+ * */
+wifi_status_t UCube_api_get_wifi_status(void);
+
+/*
+ * Connect to a Wi-Fi network.
+ * At the end of the process the onFinish_cb will be called.
+ * The process will be limited to x seconds of timeout.
+ *
+ * @param timeout: Connection timeout in seconds.
+ * @param onFinish_cb: Callback that indicates the end of process
+ * @param p_network_handler: All necessary information of the network
+ * @return 0 when success, otherwise != 0.
+ * */
+error_t UCube_api_connect_wifi(uint32_t timeout, void (*onFinish_cb)(uint8_t), network_handler_t * p_network_handler);
+
+/*
+ * Disconnect from Wi-Fi network.
+ * At the end of the process the onFinish_cb will be called.
+ * The process will be limited to x seconds of timeout.
+ *
+ * @param timeout: Connection timeout in seconds
+ * @param onFinish_cb: Callback that indicates the end of process
+ * @param p_network_handler: Information regarding network.
+ * @return 0 when success, otherwise != 0.
+ * */
+error_t UCube_api_disconnect_wifi(uint32_t timeout, void (*onFinish_cb)(uint8_t), network_handler_t * p_network_handler);
+
+/* Register a callback in order to be notified when Wi-Fi status changes.
+ *
+ * @param onWiFiStatusChange_cb: callback which is called each time the current
+ * status changes.
+ * */
+void UCube_api_register_wifi_status_change(void (*onWiFiStatusChange_cb)(uint8_t));
+
+/* Connect to Wi-Fi network via access point mode.
+ *
+ * @return 0 when success, otherwise != 0.
+ * */
+error_t UCube_api_connect_wifi_ap(void);
+
+/* Disconnect to Wi-Fi network via access point mode.
+ *
+ * @return 0 when success, otherwise != 0.
+ * */
+error_t UCube_api_disconnect_wifi_ap(void);
+
+
+/////////////////////////////////////////// Network
+
+/*
+ * Perform a HTTP request based on the socket handler input.
+ *
+ * @param socket_handler: All information necessary to create an HTTP request
+ * @return 0 if success, otherwise != 0.
+ * */
+error_t UCube_api_send_http_request(socket_handler_t * socket_handler);
+
+/*
+ * Returns network status structure which contains the status: enabled or
+ * disabled, the user's preferred interface, furthermore the current activated
+ * interface.
+ *
+ * @return network information
+ * */
+network_status_t UCube_api_get_connection_status(void);
+
+/*
+ * Returns current preferred network interface, it can be Wi-Fi or
+ * cellular.
+ *
+ * @return The current preferred network interface.
+ * */
+network_interface_t UCube_api_get_preferred_network_interface(void);
+
+/*
+ * Sets preferred network interface: Wi-Fi or cellular.
+ * The Wi-Fi is the default preferred network interface.
+ *
+ * @param user's preferred interface
+ * @return 0 if success, otherwise != 0.
+ *  */
+error_t  UCube_api_set_preferred_network_interface(
+        network_interface_t preferred_interface);
+
+/////////////////////////////////////////// Payment
+
+/*
+ * Perform a new transaction which will be configured using the uCube
+ * payment request content.
+ *
+ * @param uCubePaymentRequest: all necessary information to prepare a payment
+ *
+ * @return 0 if success, otherwise != 0.
+ */
 error_t  UCube_api_pay(UCubePaymentRequest_t* uCubePaymentRequest);
 
-// connect to network using cellular connectivity
-error_t  UCube_api_connect(network_handler_t * network_handler);
+/*
+ * Reset the payment context.
+ *
+ * @return void
+ */
+void UCube_api_payment_close(void);
 
-// send a HTTP request
-error_t  UCube_api_send_http_request(socket_handler_t * socket_handler);
+/////////////////////////////////////////// RPC
 
-// send  RPC 
-uint8_t UCube_api_send_Data(svpp_com_transaction_param_u  rpc_param,
-         uint32_t rpc_id);
+uint8_t UCube_api_send_Data(svpp_com_transaction_param_u  rpc_param, uint32_t rpc_id);
 ```
 
 #### 4.1 Payment  
@@ -1131,8 +1281,9 @@ Create and init task function to be called from appmodem.c. Create a queue and a
 
 ```c
 /**
- * @brief    intialize customer app
+ * intialize customer app
  * create customer task and queue
+ *
  * @return  error
  */
 error_t customer_app_init(void)
@@ -1178,7 +1329,8 @@ Example:
 
 ```c
 /**
- * @brief    main of customer app
+ * main of customer app
+ *
  * @return  NULL
  */
 TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
@@ -1227,7 +1379,8 @@ Example from customer task:
 ```c
 
 /**
- * @brief    main of customer app
+ * main of customer app
+ *
  * @return  NULL
  */
 TASK_FUNCTION_RETURN_TYPE customer_app_routine(TASK_FUNCTION_ARGS)
