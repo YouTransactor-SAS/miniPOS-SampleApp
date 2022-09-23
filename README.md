@@ -291,7 +291,7 @@ uint8_t UCube_api_send_Data(svpp_com_transaction_param_u  rpc_param, uint32_t rp
 
 The SDK implements the payment state machine, both contact and contactless. You configure your transaction using the uCubePaymentRequest_t object by specifing a value for each attribut, for instance, the transaction amount, currency, type, ...etc.  
 
-#### pay API
+#### Payment API
 
 Create a Payment Request variable :
 
