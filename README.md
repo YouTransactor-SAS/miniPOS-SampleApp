@@ -833,82 +833,57 @@ typedef enum{
 ```
 #### 4.2 Connectivity
 
-#### Connect to cellular network
+##### 4.2.1 Wi-Fi
 
-Create a network_handler_t variable:
-
-```c
-network_handler_t  network_handler_ct;
-```
-
-Initialize the network APN and set the prefered_network in the network handler to the cellular network. Then, call the UCube_api_connect.
+Use the `UCube_api_connect_wifi()` to connect to a known Wi-Fi network, by providing the SSID and the password. At the end of the connection process an `onFinish` callback will be called. The `UCube_api_get_wifi_status()` can be used to check the connection status.
 
 ```c
-#define QL_DEF_APN_CT  "orange" 
-
-error_t init_network(network_handler_t * network_handler) {
-
-    error_t err = ERRORNO;
-    
-    strlcpy(network_handler->cellular_conf.apn, QL_DEF_APN_CT, QAPI_DSS_CALL_INFO_APN_MAX_LEN);
-    
-    network_handler->prefered_network = PREFERED_NETWORK_CELLULAR;
-    
-    UCube_api_connect(network_handler);
-    
-    return err;
-}
-
+strlcpy(network_handler->wifi_conf.ssid, WIFI_SSID, DRIVER_WIFI_SSID_MAX_LEN);
+strlcpy(network_handler->wifi_conf.password, WIFI_PASSWORD, DRIVER_WIFI_PASSWORD_MAX_LEN);
+UCube_api_connect_wifi(uint32_t timeout, void (*onFinish_cb)(uint8_t), network_handler_t * p_network_handler);
 ```
-#### Send HTTP request
+
+Another way to connect to Wi-Fi exists it is using Software Access Point mode. To enable this mode use `UCube_api_connect_wifi_ap()` API, a new software Access point will be visible under the SSID "MCC_WIFI_AP". 
+First connect to this access point and open the URL: "http://192.168.4.1/login". A web page will be shown where you can scan, select and connect one of available Wi-Fi network.
+
+##### 4.2.2 4G
+
+Insert your SIM card and use the `UCube_api_connect_cellular()` to connect to cellular network. At the end of the connection process an onFinish callback will be called. The `UCube_api_get_cellular_status()` can be used to check the connection status.
+
+```c
+UCube_api_connect_cellular(uint32_t timeout, void (*onFinish_cb)(uint8_t), network_handler_t * p_network_handler);
+```
+
+In order to select the cellular network as a preferred interface use this API:
+
+```c
+UCube_api_set_preferred_network_interface(NETWORK_INTERFACE_CELLULAR);
+```
+
+##### 4.2.3 HTTP request
 
 Create a socket_handler_t variable :
-
 ```c
-    socket_handler_t socket_handler_ct;
+socket_handler_t socket_handler_ct;
 ```
 
 Define the request url and type (GET/POST) as below:
 
 ```c
-    #define HTTP_REQUEST_URL  "https://webhook.site/5680215f-0091-45ab-b7b6-e2a9651df81e"
+#define HTTP_REQUEST_URL "https://webhook.site/5680215f-0091-45ab-b7b6-e2a9651df81e"
 ```
 
-Initialize the HTTP request using in your socket_handler_t variable.Then, call the UCube_api_send_http_request with a pointer to your socket_handler. 
+Call the UCube_api_send_http_request with a pointer to your socket_handler.
 
 ```c
-error_t init_http_request(socket_handler_t * socket_handler) {
+sprintf((char*)socket_handler->request_url, HTTP_REQUEST_URL);
 
-    error_t err = ERRORNO;
+socket_handler->url_length = strlen((const char *)socket_handler->request_url);
 
-    // define url of request
-    
-    memset(socket_handler->request_url, 0, sizeof(socket_handler->request_url));
-    
-    sprintf((char*)socket_handler->request_url, HTTP_REQUEST_URL);
-    
-    socket_handler->url_length = strlen((const char *)socket_handler->request_url);
-    
-    socket_handler->request_type = HTTPS_CLIENT_GET_E ;
-    
-    socket_handler->requestResult_cb = requestResult_ct_cb;
-    
-    UCube_api_send_http_request(socket_handler);
-
-    return err;
-}
+socket_handler->request_type = HTTPS_CLIENT_GET_E ;socket_handler->requestResult_cb = requestResult_ct_cb;UCube_api_send_http_request(socket_handler);
 ```
 
-The request callback requestResult_ct_cb defined in init_http_request() is called at the end of http request.
-Example is provided below: it displays the response code received from the server.
-
-```c
-void requestResult_ct_cb (https_request_handler_t request_handler){
-
-    PRINTF("**Request result %d\r\n", request_handler.resp_Code);
-    // TODO Put your code here
-}
-```
+The requestResult_ct_cb callback is called at the end of the http request.
 
 ### 5. RPC Commands
 
